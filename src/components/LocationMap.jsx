@@ -32,6 +32,7 @@ function LocationMap({
   routeCoordinates = [],
   onPick,
   className = '',
+  height = '360px',
 }) {
   const center = position
     ? [Number(position.lat ?? position.latitude), Number(position.lng ?? position.longitude)]
@@ -45,7 +46,8 @@ function LocationMap({
       center={center}
       zoom={15}
       scrollWheelZoom
-      className={`h-[360px] w-full rounded-xl ${className}`}
+      style={{ height }}
+      className={`w-full rounded-xl ${className}`}
     >
       <MapViewport center={center} />
       <MapClickHandler onPick={onPick} />

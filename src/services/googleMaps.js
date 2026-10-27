@@ -1,9 +1,32 @@
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY
 let googleMapsPromise
 let callbackSequence = 0
+let authFailureHandlerInstalled = false
+let googleMapsAuthError = ''
+
+function installAuthFailureHandler() {
+  if (authFailureHandlerInstalled) return
+
+  const previousHandler = window.gm_authFailure
+  window.gm_authFailure = () => {
+    googleMapsAuthError = 'Google Maps menolak API key. Periksa key, billing, dan HTTP referrer di Google Cloud.'
+    try {
+      previousHandler?.()
+    } finally {
+      window.dispatchEvent(new CustomEvent('callplan-google-maps-auth-error', {
+        detail: { message: googleMapsAuthError },
+      }))
+    }
+  }
+  authFailureHandlerInstalled = true
+}
 
 export function hasGoogleMapsApiKey() {
   return Boolean(GOOGLE_MAPS_API_KEY)
+}
+
+export function getGoogleMapsAuthError() {
+  return googleMapsAuthError
 }
 
 export function loadGoogleMaps() {
@@ -11,11 +34,13 @@ export function loadGoogleMaps() {
     return Promise.reject(new Error('Google Maps hanya dapat dimuat di browser.'))
   }
 
+  if (googleMapsAuthError) return Promise.reject(new Error(googleMapsAuthError))
   if (window.google?.maps?.Geocoder) return Promise.resolve(window.google.maps)
   if (!GOOGLE_MAPS_API_KEY) {
     return Promise.reject(new Error('Google Maps belum dikonfigurasi. Isi VITE_GOOGLE_MAPS_API_KEY di .env lalu restart Vite.'))
   }
   if (googleMapsPromise) return googleMapsPromise
+  installAuthFailureHandler()
 
   googleMapsPromise = new Promise((resolve, reject) => {
     const callbackName = `callPlanGoogleMapsReady${callbackSequence++}`
@@ -49,8 +74,24 @@ export function loadGoogleMaps() {
 async function geocode(request) {
   const maps = await loadGoogleMaps()
   let response
+  let timeout
+  let removeAuthListener
+  const authFailure = new Promise((resolve, reject) => {
+    const handler = (event) => reject(new Error(event.detail?.message || 'Google Maps menolak API key. Periksa key, billing, dan HTTP referrer di Google Cloud.'))
+    window.addEventListener('callplan-google-maps-auth-error', handler, { once: true })
+    removeAuthListener = () => window.removeEventListener('callplan-google-maps-auth-error', handler)
+  })
   try {
-    response = await new maps.Geocoder().geocode(request)
+    response = await Promise.race([
+      new maps.Geocoder().geocode(request),
+      authFailure,
+      new Promise((resolve, reject) => {
+        timeout = window.setTimeout(
+          () => reject(new Error('Google Geocoding terlalu lama merespons.')),
+          5000,
+        )
+      }),
+    ])
   } catch (error) {
     const status = String(error?.status || error?.code || '')
     if (status.includes('REQUEST_DENIED')) {
@@ -60,6 +101,9 @@ async function geocode(request) {
       throw new Error('Kuota Google Geocoding tercapai. Periksa kuota dan billing di Google Cloud.', { cause: error })
     }
     throw new Error(error instanceof Error ? error.message : 'Google Maps gagal mencari alamat.', { cause: error })
+  } finally {
+    window.clearTimeout(timeout)
+    removeAuthListener?.()
   }
   const result = response.results?.[0]
 
@@ -69,14 +113,20 @@ async function geocode(request) {
     latitude: result.geometry.location.lat(),
     longitude: result.geometry.location.lng(),
     address: result.formatted_address,
+    countryCode: result.address_components?.find((component) => component.types.includes('country'))?.short_name || '',
   }
 }
 
 export async function searchGoogleAddress(address) {
-  return geocode({ address, region: 'id' })
+  const result = await geocode({
+    address,
+    componentRestrictions: { country: 'ID' },
+    region: 'id',
+  })
+  return result?.countryCode.toUpperCase() === 'ID' ? result : null
 }
 
 export async function reverseGoogleGeocode(latitude, longitude) {
   const result = await geocode({ location: { lat: Number(latitude), lng: Number(longitude) } })
-  return result?.address || ''
+  return result?.countryCode.toUpperCase() === 'ID' ? result.address : ''
 }

@@ -37,12 +37,12 @@ async function requestNominatim(path, signal) {
 
 export async function searchAddress(address, { signal } = {}) {
   const results = await requestNominatim(
-    `/search?format=jsonv2&limit=1&q=${encodeURIComponent(address)}`,
+    `/search?format=jsonv2&addressdetails=1&countrycodes=id&limit=1&q=${encodeURIComponent(address)}`,
     signal,
   )
   const result = results[0]
 
-  if (!result) return null
+  if (!result || result.address?.country_code?.toLowerCase() !== 'id') return null
 
   return {
     latitude: Number(result.lat),
@@ -53,9 +53,9 @@ export async function searchAddress(address, { signal } = {}) {
 
 export async function reverseGeocode(latitude, longitude, { signal } = {}) {
   const result = await requestNominatim(
-    `/reverse?format=jsonv2&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`,
+    `/reverse?format=jsonv2&addressdetails=1&lat=${encodeURIComponent(latitude)}&lon=${encodeURIComponent(longitude)}`,
     signal,
   )
 
-  return result.display_name || ''
+  return result.address?.country_code?.toLowerCase() === 'id' ? result.display_name || '' : ''
 }

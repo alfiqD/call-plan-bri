@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ExternalLink, LoaderCircle, MapPin } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { ExternalLink, LoaderCircle, MapPin, Search } from 'lucide-react'
 import { createId } from '../data/workspace'
 import { reverseGeocode, searchAddress } from '../services/geocoding'
 import { hasGoogleMapsApiKey, reverseGoogleGeocode, searchGoogleAddress } from '../services/googleMaps'
@@ -24,17 +24,21 @@ function CustomerForm({ customer, onClose, onSubmit }) {
   const [form, setForm] = useState(() => ({ ...emptyCustomer, ...customer, noRekening: customer?.noRekening || '' }))
   const [error, setError] = useState('')
   const [isMapOpen, setIsMapOpen] = useState(false)
-  const [mapProvider, setMapProvider] = useState('google')
+  const [mapProvider, setMapProvider] = useState('openstreetmap')
   const [addressLookup, setAddressLookup] = useState('')
+  const [googleMapNotice, setGoogleMapNotice] = useState('')
+  const [mapSearchQuery, setMapSearchQuery] = useState(form.address)
+  const [mapSearchStatus, setMapSearchStatus] = useState('')
   const addressRef = useRef(form.address)
   const resolvedAddressRef = useRef(customer?.address || '')
-  const resolvedProviderRef = useRef(customer?.address ? 'existing' : '')
+  const resolvedProviderRef = useRef(customer?.address ? mapProvider : '')
   const lookupController = useRef(null)
   const update = (event) => {
     const { name, value } = event.target
     if (name === 'address') addressRef.current = value
     setForm((current) => ({
       ...current,
+      ...(name === 'address' && value !== current.address ? { latitude: '', longitude: '' } : {}),
       [name]: name === 'noRekening' ? value.replace(/\D/g, '') : value,
     }))
   }
@@ -46,6 +50,13 @@ function CustomerForm({ customer, onClose, onSubmit }) {
     latitude: form.latitude,
     longitude: form.longitude,
   })
+  const handleGoogleMapError = useCallback((mapError) => {
+    setMapProvider('openstreetmap')
+    const message = mapError instanceof Error
+      ? mapError.message
+      : 'Google Maps tidak dapat dimuat. Periksa API key dan pengaturan Google Cloud.'
+    setGoogleMapNotice(`${message} Peta di formulir tetap menggunakan OpenStreetMap.`)
+  }, [])
 
   useEffect(() => () => lookupController.current?.abort(), [])
 
@@ -56,16 +67,35 @@ function CustomerForm({ customer, onClose, onSubmit }) {
     return controller
   }
 
-  const findPositionFromAddress = async (address) => {
+  const findPositionFromAddress = useCallback(async (address) => {
     const query = address.trim()
-    if (!query || (resolvedAddressRef.current === query && mapPosition && resolvedProviderRef.current === mapProvider)) return
+    const hasCoordinates = Boolean(form.latitude && form.longitude)
+    if (query.length < 5 || (resolvedAddressRef.current === query && hasCoordinates && resolvedProviderRef.current === mapProvider)) return
 
     const controller = startAddressLookup()
     setAddressLookup('Mencari titik dan alamat di peta...')
+    let providerUsed = mapProvider
     try {
-      const result = mapProvider === 'google'
-        ? await searchGoogleAddress(query)
-        : await searchAddress(query, { signal: controller.signal })
+      let result
+      if (mapProvider === 'google') {
+        try {
+          result = await searchGoogleAddress(query)
+        } catch (googleError) {
+          if (controller.signal.aborted) return
+          console.error('Pencarian Google Maps gagal; mencoba OpenStreetMap.', googleError)
+          providerUsed = 'openstreetmap'
+          setAddressLookup('Google Maps tidak tersedia. Mencoba mencari alamat melalui OpenStreetMap...')
+          result = await searchAddress(query, { signal: controller.signal })
+        }
+      } else {
+        result = await searchAddress(query, { signal: controller.signal })
+      }
+      if (controller.signal.aborted) return
+      if (!result && providerUsed === 'google') {
+        providerUsed = 'openstreetmap'
+        setAddressLookup('Alamat tidak ditemukan di Google Maps. Mencoba OpenStreetMap...')
+        result = await searchAddress(query, { signal: controller.signal })
+      }
       if (controller.signal.aborted) return
       if (addressRef.current !== address) return
       if (!result) {
@@ -80,15 +110,87 @@ function CustomerForm({ customer, onClose, onSubmit }) {
       }))
       addressRef.current = result.address
       resolvedAddressRef.current = result.address
-      resolvedProviderRef.current = mapProvider
-      setAddressLookup('Lokasi ditemukan. Periksa kembali pin dan alamat lengkapnya.')
+      resolvedProviderRef.current = providerUsed
+      if (providerUsed !== mapProvider) setMapProvider(providerUsed)
+      setAddressLookup(providerUsed === 'google'
+        ? 'Lokasi ditemukan. Periksa kembali pin dan alamat lengkapnya.'
+        : mapProvider === 'google'
+          ? 'Lokasi ditemukan melalui OpenStreetMap. Periksa kembali pin dan alamatnya.'
+          : 'Lokasi ditemukan. Periksa kembali pin dan alamat lengkapnya.')
     } catch (lookupError) {
       if (controller.signal.aborted) return
       if (lookupError.name === 'AbortError') return
       console.error('Gagal mencari lokasi berdasarkan alamat.', lookupError)
       setAddressLookup(lookupError instanceof Error ? lookupError.message : 'Lokasi alamat gagal dicari.')
     }
+  }, [form.latitude, form.longitude, mapProvider])
+
+  const searchMapLocation = async () => {
+    const query = mapSearchQuery.trim()
+    if (query.length < 3) {
+      setMapSearchStatus('Masukkan alamat atau nama tempat (minimal 3 karakter).')
+      return
+    }
+
+    const controller = startAddressLookup()
+    setMapSearchStatus('Mencari lokasi...')
+    let providerUsed = mapProvider
+    try {
+      let result
+      if (mapProvider === 'google') {
+        try {
+          result = await searchGoogleAddress(query)
+        } catch (googleError) {
+          if (controller.signal.aborted) return
+          console.error('Pencarian lokasi Google Maps gagal; mencoba OpenStreetMap.', googleError)
+          providerUsed = 'openstreetmap'
+          setMapSearchStatus('Google Maps tidak tersedia. Mencoba OpenStreetMap...')
+          result = await searchAddress(query, { signal: controller.signal })
+        }
+      } else {
+        result = await searchAddress(query, { signal: controller.signal })
+      }
+
+      if (controller.signal.aborted) return
+      if (!result && providerUsed === 'google') {
+        providerUsed = 'openstreetmap'
+        setMapSearchStatus('Lokasi tidak ditemukan di Google Maps. Mencoba OpenStreetMap...')
+        result = await searchAddress(query, { signal: controller.signal })
+      }
+      if (controller.signal.aborted) return
+      if (!result) {
+        setMapSearchStatus('Lokasi tidak ditemukan. Coba kata kunci atau alamat yang lebih lengkap.')
+        return
+      }
+
+      const latitude = Number(result.latitude).toFixed(7)
+      const longitude = Number(result.longitude).toFixed(7)
+      setForm((current) => ({ ...current, address: result.address, latitude, longitude }))
+      addressRef.current = result.address
+      resolvedAddressRef.current = result.address
+      resolvedProviderRef.current = providerUsed
+      setMapSearchQuery(result.address)
+      if (providerUsed !== mapProvider) {
+        setMapProvider(providerUsed)
+        setGoogleMapNotice('Pencarian Google Maps gagal. Lokasi ditemukan melalui OpenStreetMap.')
+      }
+      setMapSearchStatus('Lokasi ditemukan. Pin telah dipindahkan ke hasil pencarian.')
+    } catch (lookupError) {
+      if (controller.signal.aborted || lookupError.name === 'AbortError') return
+      console.error('Gagal mencari lokasi pada pemilih titik.', lookupError)
+      setMapSearchStatus(lookupError instanceof Error ? lookupError.message : 'Lokasi gagal dicari. Coba lagi.')
+    }
   }
+
+  useEffect(() => {
+    if (form.address.trim().length < 5) return undefined
+
+    const timeout = window.setTimeout(() => {
+      void findPositionFromAddress(form.address)
+    }, 900)
+
+    return () => window.clearTimeout(timeout)
+  }, [findPositionFromAddress, form.address])
 
   const selectMapPosition = async ({ lat, lng }) => {
     const latitude = lat.toFixed(7)
@@ -101,9 +203,21 @@ function CustomerForm({ customer, onClose, onSubmit }) {
     const controller = startAddressLookup()
     setAddressLookup('Membaca alamat lengkap dari titik peta...')
     try {
-      const address = mapProvider === 'google'
-        ? await reverseGoogleGeocode(latitude, longitude)
-        : await reverseGeocode(latitude, longitude, { signal: controller.signal })
+      let address
+      let providerUsed = mapProvider
+      if (mapProvider === 'google') {
+        try {
+          address = await reverseGoogleGeocode(latitude, longitude)
+        } catch (googleError) {
+          if (controller.signal.aborted) return
+          console.error('Reverse geocoding Google Maps gagal; mencoba OpenStreetMap.', googleError)
+          providerUsed = 'openstreetmap'
+          setAddressLookup('Google Maps tidak tersedia. Membaca alamat melalui OpenStreetMap...')
+          address = await reverseGeocode(latitude, longitude, { signal: controller.signal })
+        }
+      } else {
+        address = await reverseGeocode(latitude, longitude, { signal: controller.signal })
+      }
       if (controller.signal.aborted) return
       if (!address) {
         setAddressLookup('Pin tersimpan, tetapi alamat lengkap tidak ditemukan untuk titik ini.')
@@ -112,8 +226,13 @@ function CustomerForm({ customer, onClose, onSubmit }) {
       setForm((current) => ({ ...current, address }))
       addressRef.current = address
       resolvedAddressRef.current = address
-      resolvedProviderRef.current = mapProvider
-      setAddressLookup('Alamat lengkap diperbarui dari peta.')
+      resolvedProviderRef.current = providerUsed
+      if (providerUsed !== mapProvider) setMapProvider(providerUsed)
+      setAddressLookup(providerUsed === 'google'
+        ? 'Alamat lengkap diperbarui dari Google Maps.'
+        : mapProvider === 'google'
+          ? 'Alamat lengkap diperbarui dari OpenStreetMap.'
+          : 'Alamat lengkap diperbarui dari peta.')
     } catch (lookupError) {
       if (controller.signal.aborted) return
       if (lookupError.name === 'AbortError') return
@@ -152,7 +271,7 @@ function CustomerForm({ customer, onClose, onSubmit }) {
           <input name="noRekening" value={form.noRekening} onChange={update} maxLength={50} inputMode="numeric" pattern="[0-9]*" placeholder="Opsional — angka rekening nasabah" className="form-control" />
         </label>
         <label className="form-label">Alamat kunjungan
-          <textarea name="address" value={form.address} onChange={update} onBlur={(event) => findPositionFromAddress(event.currentTarget.value)} required maxLength={500} rows={2} placeholder="Ketik alamat lengkap; lokasi akan dicari saat kolom ditinggalkan" className="form-control resize-y" />
+          <textarea name="address" value={form.address} onChange={update} required maxLength={500} rows={2} placeholder="Ketik alamat di Indonesia; titik peta dicari otomatis" className="form-control resize-y" />
         </label>
         <label className="form-label">Sumber pencarian alamat
           <select value={mapProvider} onChange={(event) => setMapProvider(event.target.value)} className="form-control">
@@ -163,8 +282,23 @@ function CustomerForm({ customer, onClose, onSubmit }) {
         {addressLookup && <p className="text-[10px] leading-4 text-slate-500" role="status">{addressLookup}</p>}
         <details open={Boolean(form.latitude || form.longitude)} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
           <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">Titik peta <span className="font-normal text-slate-400">(diperlukan untuk rute dan validasi check-in GPS)</span></summary>
-          <p className="mb-3 mt-2 text-[10px] leading-4 text-slate-500">Pencarian alamat memakai {mapProvider === 'google' ? 'Google Maps' : 'OpenStreetMap'} dan dijalankan saat Anda meninggalkan kolom. Klik titik peta untuk mengisi alamat dan koordinat.</p>
-          <button type="button" onClick={() => setIsMapOpen(true)} className="button-secondary mb-3 w-full"><MapPin size={14} />Pilih titik di peta</button>
+          <p className="mb-3 mt-2 text-[10px] leading-4 text-slate-500">Titik dicari otomatis saat Anda mengetik alamat. Pilih lokasi yang paling sesuai di peta agar pin tepat di rumah atau tempat usaha nasabah.</p>
+          {mapPosition && !isMapOpen && (
+            <div className="mb-3 space-y-2">
+              <p className="text-[10px] font-medium text-emerald-700">Titik ditemukan: {form.latitude}, {form.longitude}</p>
+              <Suspense fallback={<div className="flex h-[200px] items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500"><LoaderCircle className="mr-2 size-4 animate-spin" />Memuat peta...</div>}>
+                {mapProvider === 'google'
+                  ? <GoogleMapLocation
+                    position={mapPosition}
+                    onPick={selectMapPosition}
+                    onMapError={handleGoogleMapError}
+                    height="200px"
+                  />
+                  : <LocationMap position={mapPosition} onPick={selectMapPosition} height="200px" />}
+              </Suspense>
+            </div>
+          )}
+          <button type="button" onClick={() => { setMapSearchQuery(form.address); setMapSearchStatus(''); setIsMapOpen(true) }} className="button-secondary mb-3 w-full"><MapPin size={14} />Pilih titik di peta</button>
           {mapPosition && <p className="mb-3 text-[10px] text-emerald-700">Pin tersimpan: {form.latitude}, {form.longitude}</p>}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="form-label">Latitude
@@ -199,15 +333,48 @@ function CustomerForm({ customer, onClose, onSubmit }) {
         </div>
       </form>
       {isMapOpen && (
-        <Modal title="Pilih titik lokasi nasabah" description="Klik peta untuk menyimpan koordinat dan membaca alamat lengkap dari lokasi tersebut." onClose={() => setIsMapOpen(false)} wide>
+        <Modal title="Pilih titik lokasi nasabah" description="Klik peta untuk menyimpan koordinat dan membaca alamat lengkap dari lokasi tersebut." onClose={() => setIsMapOpen(false)} wide portal>
           <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="search"
+                value={mapSearchQuery}
+                onChange={(event) => setMapSearchQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault()
+                    void searchMapLocation()
+                  }
+                }}
+                maxLength={500}
+                placeholder="Cari alamat atau tempat di Indonesia..."
+                aria-label="Cari lokasi pada peta"
+                className="form-control min-w-0 flex-1"
+              />
+              <button type="button" onClick={() => void searchMapLocation()} className="button-primary shrink-0">
+                <Search size={14} />Cari lokasi
+              </button>
+            </div>
+            {mapSearchStatus && <p className="text-xs leading-5 text-slate-600" role="status">{mapSearchStatus}</p>}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => setMapProvider('google')} aria-pressed={mapProvider === 'google'} className={`button-secondary ${mapProvider === 'google' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : ''}`}>Google Maps</button>
+              <button type="button" onClick={() => { setGoogleMapNotice(''); setMapProvider('google') }} aria-pressed={mapProvider === 'google'} className={`button-secondary ${mapProvider === 'google' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : ''}`}>Google Maps</button>
               <button type="button" onClick={() => setMapProvider('openstreetmap')} aria-pressed={mapProvider === 'openstreetmap'} className={`button-secondary ${mapProvider === 'openstreetmap' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : ''}`}>OpenStreetMap</button>
             </div>
+            {googleMapNotice && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900" role="alert">
+                <p>{googleMapNotice}</p>
+                <a href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer" className="button-secondary shrink-0">
+                  <ExternalLink size={14} />Buka Google Maps
+                </a>
+              </div>
+            )}
             <Suspense fallback={<div className="flex h-[360px] items-center justify-center text-xs text-slate-500"><LoaderCircle className="mr-2 size-4 animate-spin" />Memuat peta...</div>}>
               {mapProvider === 'google'
-                ? <GoogleMapLocation position={mapPosition} onPick={selectMapPosition} />
+                ? <GoogleMapLocation
+                  position={mapPosition}
+                  onPick={selectMapPosition}
+                  onMapError={handleGoogleMapError}
+                />
                 : <LocationMap position={mapPosition} onPick={selectMapPosition} />}
             </Suspense>
             <p className="text-[10px] leading-4 text-slate-500">{mapPosition ? `Titik dipilih: ${form.latitude}, ${form.longitude}.` : 'Geser dan perbesar peta, lalu klik tepat pada lokasi nasabah.'} Klik pin untuk mengisi alamat lengkap dengan penyedia yang dipilih.</p>
