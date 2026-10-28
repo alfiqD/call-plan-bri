@@ -48,18 +48,24 @@ function DashboardPage({ customers, appointments, onSaveVisit, onNotify, onNavig
 
   return (
     <>
-      <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div>
-          <p className="text-sm font-medium text-slate-500">{greeting}, Andi <span aria-hidden="true">👋</span></p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-[28px]">Siap untuk kunjungan hari ini?</h2>
-          <p className="mt-2 text-xs text-slate-500">{formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} <span className="mx-1.5 text-slate-300">·</span> Cabang Bandung</p>
+      <div className="relative mb-6 overflow-hidden rounded-2xl bg-gradient-to-br from-[#00529b] via-[#004785] to-[#003b70] px-5 py-6 text-white shadow-lg shadow-blue-950/10 sm:px-8 sm:py-7">
+        <div className="pointer-events-none absolute -right-10 -top-20 size-64 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -right-1 -top-11 size-44 rounded-full border border-white/10" />
+        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-medium text-blue-100">{greeting}, Andi <span aria-hidden="true">👋</span></p>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight sm:text-[28px]">Siap untuk kunjungan hari ini?</h2>
+            <p className="mt-2 text-xs text-blue-100/90">{formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} <span className="mx-1.5 text-white/40">·</span> Cabang Bandung</p>
+          </div>
+          <button onClick={() => onNavigate('schedule')} className="inline-flex min-h-10 w-fit items-center gap-2 rounded-xl bg-[#f36f21] px-4 text-xs font-bold text-white shadow-sm shadow-orange-950/15 transition hover:bg-[#df5c12]">
+            <Plus size={16} /> Atur call plan
+          </button>
         </div>
-        <button onClick={() => onNavigate('schedule')} className="button-primary w-fit"><Plus size={16} /> Atur call plan</button>
       </div>
 
       <section className="grid gap-4 md:grid-cols-3" aria-label="Ringkasan kunjungan hari ini">
         {stats.map(({ label, value, icon: Icon, color, note }, index) => (
-          <article key={label} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30 sm:p-6">
+          <article key={label} className={`rounded-2xl border bg-white p-5 shadow-sm shadow-slate-200/30 sm:p-6 ${index === 0 ? 'border-blue-200 ring-1 ring-blue-100/70' : 'border-slate-200/80'}`}>
             <div className="flex items-start justify-between">
               <div className={`flex size-10 items-center justify-center rounded-xl ${color === 'blue' ? 'bg-blue-50 text-blue-600' : color === 'green' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                 <Icon size={19} />
@@ -132,9 +138,9 @@ function DashboardPage({ customers, appointments, onSaveVisit, onNotify, onNavig
             </div>
             <button onClick={() => onNavigate('schedule')} className="mt-5 w-full rounded-xl border border-slate-200 py-2.5 text-xs font-semibold text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700">Lihat semua jadwal</button>
           </section>
-          <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 p-5 text-white shadow-lg shadow-indigo-200/60">
+          <section className="flex items-center gap-4 rounded-2xl bg-gradient-to-r from-[#00529b] to-[#1479ce] p-5 text-white shadow-lg shadow-blue-900/15">
             <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white/15"><UsersRound size={20} /></div>
-            <div className="min-w-0 flex-1"><p className="text-[11px] text-indigo-100">Database nasabah</p><p className="mt-0.5 text-xl font-bold">{customers.length} <span className="text-xs font-medium text-indigo-100">kontak terdaftar</span></p></div>
+            <div className="min-w-0 flex-1"><p className="text-[11px] text-blue-100">Database nasabah</p><p className="mt-0.5 text-xl font-bold">{customers.length} <span className="text-xs font-medium text-blue-100">kontak terdaftar</span></p></div>
             <button onClick={() => onNavigate('customers')} aria-label="Buka data nasabah" className="rounded-lg p-2 hover:bg-white/10"><ArrowRight size={17} /></button>
           </section>
           <div className="flex items-center gap-3 px-1 text-[11px] text-slate-400"><CheckCheck size={15} className="text-emerald-500" /> Data kunjungan dapat diperbarui setelah check-in.</div>

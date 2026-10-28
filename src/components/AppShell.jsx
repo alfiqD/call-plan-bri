@@ -26,7 +26,7 @@ function AppShell({ activePage, onNavigate, children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f6f8fb] text-slate-800">
+    <div className="min-h-screen bg-[#f4f7fb] text-slate-800">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[252px] lg:block">
         <Sidebar activePage={activePage} onNavigate={navigate} />
       </aside>
@@ -66,7 +66,7 @@ function AppShell({ activePage, onNavigate, children }) {
             </div>
             <div className="mx-1 hidden h-8 w-px bg-slate-200 sm:block" />
             <button className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 hover:bg-slate-50">
-              <span className="flex size-9 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700">AR</span>
+              <span className="flex size-9 items-center justify-center rounded-full bg-blue-50 text-xs font-bold text-indigo-700 ring-1 ring-blue-100">AR</span>
               <span className="hidden text-left sm:block">
                 <span className="block text-xs font-semibold text-slate-800">Andi Rahman</span>
                 <span className="mt-0.5 block text-[10px] text-slate-400">Relationship Manager</span>
