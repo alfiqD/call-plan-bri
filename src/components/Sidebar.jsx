@@ -1,66 +1,124 @@
 import {
+  CalendarClock,
   CalendarDays,
   ClipboardList,
   Compass,
   LayoutDashboard,
-  MapPin,
+  LogOut,
+  Shield,
+  ShieldCheck,
+  User,
   UsersRound,
 } from 'lucide-react'
+import { useAuth } from '../context/useAuth'
 
-const navigation = [
+const baseNavigation = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'schedule', label: 'Jadwal Kunjungan', icon: CalendarDays },
   { id: 'customers', label: 'Data Nasabah', icon: UsersRound },
-  { id: 'reports', label: 'Riwayat & Laporan', icon: ClipboardList },
+  { id: 'schedule', label: 'Jadwal Kunjungan', icon: CalendarDays },
+  { id: 'follow-up', label: 'Follow-up Reminder', icon: CalendarClock },
+  { id: 'reports', label: 'Laporan Kunjungan', icon: ClipboardList },
 ]
 
-function Sidebar({ activePage, onNavigate }) {
+function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0 }) {
+  const { role, profile, user, signOut } = useAuth()
+  const isAdmin = role === 'admin'
+
+  const navigation = [
+    ...baseNavigation,
+    ...(isAdmin ? [
+      { id: 'admin-users', label: 'Kelola Akun (Admin)', icon: ShieldCheck },
+      { id: 'audit-log', label: 'Audit Log (Admin)', icon: Shield },
+    ] : []),
+  ]
+
+  const displayName = profile?.nama || user?.user_metadata?.full_name || 'Petugas RM'
+  const roleLabel = isAdmin ? 'Administrator' : 'Relationship Manager'
+
   return (
-    <div className="flex h-full flex-col border-r border-slate-200 bg-white px-4 pb-5 pt-6">
-      <div className="flex items-center gap-3 px-2">
-        <div className="relative flex size-11 items-center justify-center rounded-[14px] bg-[#00529b] text-white shadow-md shadow-blue-900/15">
-          <Compass size={22} strokeWidth={2.1} />
-          <span className="absolute bottom-1 left-1/2 h-0.5 w-4 -translate-x-1/2 rounded-full bg-[#f36f21]" />
+    <div className="flex h-full flex-col border-r border-slate-200 bg-white">
+      {/* Brand Header */}
+      <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#00529b] text-white shadow-sm shadow-[#00529b]/20">
+          <Compass size={20} strokeWidth={2.2} />
+          <span className="absolute -bottom-0.5 right-1 size-2 rounded-full bg-[#f37021] ring-2 ring-white" />
         </div>
-        <div>
-          <p className="text-[17px] font-extrabold leading-5 tracking-tight text-slate-900">call<span className="text-indigo-600">plan</span></p>
-          <p className="mt-1 text-[10px] font-semibold tracking-[.12em] text-slate-400">BRI · FIELD ACTIVITY</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[16px] font-extrabold tracking-tight text-slate-900">Call<span className="text-[#00529b]">Plan</span></span>
+            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-[#00529b]">BRI</span>
+          </div>
+          <p className="truncate text-[11px] font-medium text-slate-500">
+            KCP Iskandar Palembang
+          </p>
         </div>
       </div>
 
-      <div className="mt-10 px-3 text-[10px] font-bold tracking-[.16em] text-slate-400">MENU UTAMA</div>
-      <nav className="mt-3 space-y-1" aria-label="Navigasi utama">
-        {navigation.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => onNavigate(id)}
-            className={`group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-[13px] font-medium transition ${
-              activePage === id
-                ? 'bg-indigo-50 text-indigo-700'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-            }`}
-            aria-current={activePage === id ? 'page' : undefined}
-          >
-            <Icon size={18} strokeWidth={activePage === id ? 2.2 : 1.8} />
-            <span className="flex-1">{label}</span>
-            {activePage === id && <span className="size-1.5 rounded-full bg-indigo-600" />}
-          </button>
-        ))}
-      </nav>
+      {/* Navigation Section */}
+      <div className="flex-1 overflow-y-auto px-3 py-4">
+        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          Menu Utama
+        </p>
+        <nav className="space-y-1" aria-label="Navigasi utama">
+          {navigation.map(({ id, label, icon: Icon }) => {
+            const isActive = activePage === id
+            return (
+              <button
+                key={id}
+                onClick={() => onNavigate(id)}
+                className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
+                  isActive
+                    ? 'bg-[#eaf3fb] text-[#00529b] font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                }`}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon
+                  size={18}
+                  strokeWidth={isActive ? 2.2 : 1.9}
+                  className={isActive ? 'text-[#00529b]' : 'text-slate-400 group-hover:text-slate-600'}
+                />
+                <span className="flex-1 truncate">{label}</span>
+                {id === 'follow-up' && urgentFollowUpCount > 0 && (
+                  <span
+                    className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1.5 text-[10px] font-bold text-white shadow-xs"
+                    title={`${urgentFollowUpCount} follow-up jatuh tempo atau terlambat`}
+                  >
+                    {urgentFollowUpCount > 99 ? '99+' : urgentFollowUpCount}
+                  </span>
+                )}
+                {isActive && (
+                  <span className="size-1.5 rounded-full bg-[#00529b]" />
+                )}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
 
-      <div className="mt-auto">
-        <div className="rounded-2xl bg-[#003b70] p-4 text-white">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-white/10 text-[#ff9a55]">
-            <MapPin size={17} />
+      {/* User Info & Logout Section */}
+      <div className="border-t border-slate-100 bg-slate-50/60 p-3">
+        <div className="flex items-center gap-2.5 rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-xs font-bold text-[#00529b]">
+            {displayName.slice(0, 2).toUpperCase()}
           </div>
-          <p className="mt-3 text-xs font-semibold">Fokus perjalanan</p>
-          <p className="mt-1 text-[11px] leading-5 text-slate-400">Atur prioritas kunjungan dan catat hasil pertemuan di lapangan.</p>
-          <div className="mt-4 flex items-center gap-1.5 border-t border-white/10 pt-3 text-[10px] font-medium text-blue-100">
-            <span className="size-1.5 rounded-full bg-emerald-400" />
-            Area Bandung
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-slate-800">{displayName}</p>
+            <div className="flex items-center gap-1 text-[10px] text-slate-500">
+              {isAdmin ? <Shield size={10} className="text-amber-600" /> : <User size={10} className="text-blue-600" />}
+              <span className="truncate">{roleLabel}</span>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={signOut}
+            title="Keluar dari Akun"
+            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            aria-label="Keluar dari akun"
+          >
+            <LogOut size={16} />
+          </button>
         </div>
-        <p className="mt-4 px-2 text-[10px] text-slate-400">Versi 1.0.0 · Prototipe KP</p>
       </div>
     </div>
   )

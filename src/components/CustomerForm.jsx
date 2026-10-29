@@ -329,7 +329,7 @@ function CustomerForm({ customer, onClose, onSubmit }) {
         {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button type="button" onClick={onClose} className="button-secondary">Batal</button>
-          <button type="submit" className="button-primary">{customer ? 'Simpan perubahan' : 'Tambah nasabah'}</button>
+          <button type="submit" className="button-orange">{customer ? 'Simpan perubahan' : 'Tambah nasabah'}</button>
         </div>
       </form>
       {isMapOpen && (
@@ -357,8 +357,8 @@ function CustomerForm({ customer, onClose, onSubmit }) {
             </div>
             {mapSearchStatus && <p className="text-xs leading-5 text-slate-600" role="status">{mapSearchStatus}</p>}
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={() => { setGoogleMapNotice(''); setMapProvider('google') }} aria-pressed={mapProvider === 'google'} className={`button-secondary ${mapProvider === 'google' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : ''}`}>Google Maps</button>
-              <button type="button" onClick={() => setMapProvider('openstreetmap')} aria-pressed={mapProvider === 'openstreetmap'} className={`button-secondary ${mapProvider === 'openstreetmap' ? 'border-indigo-300 bg-indigo-50 text-indigo-700' : ''}`}>OpenStreetMap</button>
+              <button type="button" onClick={() => { setGoogleMapNotice(''); setMapProvider('google') }} aria-pressed={mapProvider === 'google'} className={`button-secondary ${mapProvider === 'google' ? 'border-blue-300 bg-blue-50 text-[#00529b] font-semibold' : ''}`}>Google Maps</button>
+              <button type="button" onClick={() => setMapProvider('openstreetmap')} aria-pressed={mapProvider === 'openstreetmap'} className={`button-secondary ${mapProvider === 'openstreetmap' ? 'border-blue-300 bg-blue-50 text-[#00529b] font-semibold' : ''}`}>OpenStreetMap</button>
             </div>
             {googleMapNotice && (
               <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-5 text-amber-900" role="alert">
@@ -384,7 +384,7 @@ function CustomerForm({ customer, onClose, onSubmit }) {
                 <a href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Google Maps</a>
                 {mapLinks.streetView && <a href={mapLinks.streetView} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Street View</a>}
               </div>
-              <button type="button" onClick={() => setIsMapOpen(false)} disabled={!mapPosition} className="button-primary disabled:cursor-not-allowed disabled:opacity-50">Gunakan titik ini</button>
+              <button type="button" onClick={() => setIsMapOpen(false)} disabled={!mapPosition} className="button-orange disabled:cursor-not-allowed disabled:opacity-50">Gunakan titik ini</button>
             </div>
           </div>
         </Modal>

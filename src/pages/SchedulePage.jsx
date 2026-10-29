@@ -27,6 +27,7 @@ function SchedulePage({
   onSaveAppointment,
   onDeleteAppointment,
   onSaveVisit,
+  onSaveFollowUp,
   onNotify,
 }) {
   const today = localDateKey()
@@ -100,132 +101,424 @@ function SchedulePage({
 
   return (
     <>
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-        <div><p className="text-xs text-slate-500">Rencanakan waktu, lokasi, dan prioritas kunjungan nasabah.</p><p className="mt-2 text-[11px] text-slate-400">Pengingat agenda berikutnya ditampilkan otomatis di panel rute.</p></div>
-        <button onClick={() => setModal({ type: 'appointment' })} className="button-primary w-fit"><Plus size={16} /> Buat jadwal</button>
+      {/* Top Header Bar */}
+      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Jadwal Kunjungan</h2>
+          <p className="mt-1 text-xs text-slate-500">
+            Perencanaan agenda dan rute kunjungan nasabah Bank BRI KCP Iskandar Palembang
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setModal({ type: 'appointment' })}
+          className="button-orange w-fit self-start sm:self-auto"
+        >
+          <Plus size={15} /> Buat Jadwal
+        </button>
       </div>
-      {actionError && <p className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700" role="alert">{actionError}</p>}
 
-      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3.5 shadow-sm shadow-slate-200/30 sm:flex-row sm:items-center sm:justify-between sm:p-4">
+      {actionError && (
+        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700" role="alert">
+          {actionError}
+        </div>
+      )}
+
+      {/* Toolbar: Month Navigation, Status Filter, View Toggle */}
+      <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <button onClick={() => changeMonth(-1)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Bulan sebelumnya"><ArrowLeft size={15} /></button>
-            <button onClick={() => setMonth(new Date(`${today}T00:00:00`))} className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">Hari ini</button>
-            <button onClick={() => changeMonth(1)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Bulan berikutnya"><ArrowRight size={15} /></button>
+            <button
+              type="button"
+              onClick={() => changeMonth(-1)}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 transition"
+              aria-label="Bulan sebelumnya"
+            >
+              <ArrowLeft size={16} />
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const now = new Date(`${today}T00:00:00`)
+                setMonth(now)
+                setSelectedDate(today)
+              }}
+              className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+            >
+              Hari Ini
+            </button>
+            <button
+              type="button"
+              onClick={() => changeMonth(1)}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 transition"
+              aria-label="Bulan berikutnya"
+            >
+              <ArrowRight size={16} />
+            </button>
           </div>
-          <h2 className="ml-1 text-sm font-bold text-slate-900">{new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(month)}</h2>
+          <h3 className="ml-1 text-sm font-bold text-slate-900">
+            {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(month)}
+          </h3>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          <label className="relative">
-            <span className="sr-only">Filter status</span>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="form-control h-9 min-w-36 appearance-none pr-8 text-[11px]">
-              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui'].map((status) => <option key={status}>{status}</option>)}
-            </select><ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
-          </label>
-          <div className="flex rounded-lg bg-slate-100 p-1">
-            <button onClick={() => setView('calendar')} className={`rounded-md px-3 py-1.5 text-[10px] font-semibold ${view === 'calendar' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Kalender</button>
-            <button onClick={() => setView('list')} className={`rounded-md px-3 py-1.5 text-[10px] font-semibold ${view === 'list' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Daftar</button>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="form-control h-8 min-w-36 appearance-none pr-8 text-xs font-medium"
+              aria-label="Filter status kunjungan"
+            >
+              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui'].map((status) => (
+                <option key={status}>{status}</option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
+          </div>
+
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+            <button
+              type="button"
+              onClick={() => setView('calendar')}
+              className={`rounded px-3 py-1 text-xs font-semibold transition ${
+                view === 'calendar'
+                  ? 'bg-white text-[#00529b] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Kalender
+            </button>
+            <button
+              type="button"
+              onClick={() => setView('list')}
+              className={`rounded px-3 py-1 text-xs font-semibold transition ${
+                view === 'list'
+                  ? 'bg-white text-[#00529b] shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Daftar
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,.75fr)]">
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/30">
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,.8fr)]">
+        {/* Main Schedule Container */}
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
           {view === 'calendar' ? (
             <>
-              <div className="grid grid-cols-7 border-b border-slate-100 bg-slate-50/70 text-center text-[9px] font-bold uppercase tracking-wide text-slate-400 sm:text-[10px]">
-                {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => <div className="py-3" key={day}>{day}</div>)}
+              {/* Day Headers */}
+              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => (
+                  <div className="py-2.5" key={day}>{day}</div>
+                ))}
               </div>
+
+              {/* Month Grid */}
               <div className="grid grid-cols-7">
                 {calendarCells.map(({ date, key, inMonth }) => {
                   const dayAppointments = appointmentsForDate(key)
                   const selected = selectedDate === key
+                  const isToday = key === today
                   return (
-                    <button key={key} onClick={() => setSelectedDate(key)} className={`calendar-cell min-h-[76px] border-b border-r border-slate-100 p-1.5 text-left transition sm:min-h-[100px] sm:p-2 ${!inMonth ? 'bg-slate-50/50 text-slate-300' : 'text-slate-700'} ${selected ? 'bg-indigo-50/70 ring-1 ring-inset ring-indigo-300' : 'hover:bg-slate-50'}`}>
-                      <span className={`flex size-6 items-center justify-center rounded-full text-[10px] font-semibold sm:size-7 sm:text-[11px] ${key === today ? 'bg-indigo-600 text-white' : ''}`}>{date.getDate()}</span>
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSelectedDate(key)}
+                      className={`min-h-[75px] border-b border-r border-slate-100 p-1.5 text-left transition sm:min-h-[90px] sm:p-2 ${
+                        !inMonth ? 'bg-slate-50/40 text-slate-300' : 'text-slate-700'
+                      } ${
+                        selected
+                          ? 'bg-[#eaf3fb]/60 ring-1 ring-inset ring-[#00529b]'
+                          : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <span className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
+                        isToday ? 'bg-[#00529b] text-white font-bold' : ''
+                      }`}>
+                        {date.getDate()}
+                      </span>
                       <div className="mt-1 space-y-1">
-                        {dayAppointments.slice(0, 2).map((appointment) => <div key={appointment.id} className={`truncate rounded px-1 py-0.5 text-[8px] font-medium sm:px-1.5 sm:text-[9px] ${appointment.status === 'Selesai' ? 'bg-emerald-50 text-emerald-700' : appointment.status === 'Reschedule' ? 'bg-amber-50 text-amber-700' : 'bg-blue-50 text-blue-700'}`}><span className="hidden sm:inline">{appointment.time} </span>{getCustomer(customers, appointment.customerId)?.name || 'Nasabah'}</div>)}
-                        {dayAppointments.length > 2 && <span className="block px-1 text-[8px] text-slate-400 sm:text-[9px]">+{dayAppointments.length - 2} lainnya</span>}
+                        {dayAppointments.slice(0, 2).map((appointment) => {
+                          const cust = getCustomer(customers, appointment.customerId)
+                          const statusBg = appointment.status === 'Selesai'
+                            ? 'bg-emerald-50 text-emerald-700'
+                            : appointment.status === 'Reschedule'
+                              ? 'bg-amber-50 text-amber-700'
+                              : 'bg-blue-50 text-[#00529b]'
+                          return (
+                            <div
+                              key={appointment.id}
+                              className={`truncate rounded px-1 py-0.5 text-[9px] font-medium ${statusBg}`}
+                            >
+                              <span className="font-bold">{appointment.time} </span>
+                              {cust?.name || 'Nasabah'}
+                            </div>
+                          )
+                        })}
+                        {dayAppointments.length > 2 && (
+                          <span className="block px-1 text-[9px] text-slate-400 font-medium">
+                            +{dayAppointments.length - 2} lainnya
+                          </span>
+                        )}
                       </div>
                     </button>
                   )
                 })}
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-[10px] text-slate-400 sm:px-5">
-                <span><span className="mr-1.5 inline-block size-2 rounded-full bg-indigo-600" />Hari ini <span className="mx-2">·</span> Pilih tanggal untuk melihat agendanya</span>
-                <span>{monthAppointments.length} jadwal bulan ini</span>
+
+              {/* Agenda Terpilih di Bawah Kalender */}
+              <div className="border-t border-slate-200">
+                <div className="flex items-center justify-between bg-slate-50/50 px-5 py-3 border-b border-slate-100">
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">
+                      Agenda: {formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      {filteredAppointments.length} agenda pada tanggal ini
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setModal({ type: 'appointment', date: selectedDate })}
+                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    <Plus size={13} /> Tambah Agenda
+                  </button>
+                </div>
+
+                <div className="divide-y divide-slate-100">
+                  {filteredAppointments.length > 0 ? (
+                    filteredAppointments.map((appointment) => {
+                      const customer = getCustomer(customers, appointment.customerId)
+                      return (
+                        <AppointmentRow
+                          key={appointment.id}
+                          appointment={appointment}
+                          customer={customer}
+                          onMap={() => showCustomerMap(customer)}
+                          onEdit={() => setModal({ type: 'appointment', appointment })}
+                          onVisit={() => setModal({ type: 'visit', appointment })}
+                          onDelete={() => deleteAppointment(appointment)}
+                        />
+                      )
+                    })
+                  ) : (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      Tidak ada agenda kunjungan pada tanggal ini.
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           ) : (
+            /* List View */
             <div className="divide-y divide-slate-100">
-              <div className="flex items-center justify-between px-5 py-4"><div><h3 className="text-sm font-bold text-slate-900">Daftar jadwal</h3><p className="mt-1 text-[11px] text-slate-400">{monthAppointments.length} agenda bulan ini</p></div><CalendarDays size={18} className="text-slate-400" /></div>
-              {filteredAppointments.map((appointment) => {
-                const customer = getCustomer(customers, appointment.customerId)
-                return <AppointmentRow key={appointment.id} appointment={appointment} customer={customer} onMap={() => showCustomerMap(customer)} onEdit={() => setModal({ type: 'appointment', appointment })} onVisit={() => setModal({ type: 'visit', appointment })} onDelete={() => deleteAppointment(appointment)} />
-              })}
-              {!filteredAppointments.length && <div className="px-6 py-12 text-center text-xs text-slate-400">Tidak ada jadwal yang cocok untuk filter ini.</div>}
-            </div>
-          )}
-
-          {view === 'calendar' && (
-            <div className="border-t border-slate-100">
-              <div className="flex items-center justify-between px-5 py-4">
-                <div><h3 className="text-sm font-bold text-slate-900">Agenda terpilih</h3><p className="mt-1 text-[11px] text-slate-400">{formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</p></div>
-                <button onClick={() => setModal({ type: 'appointment', date: selectedDate })} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-[10px] font-semibold text-slate-600 hover:border-indigo-200 hover:text-indigo-700"><Plus size={13} /> Tambah</button>
+              <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Daftar Jadwal Kunjungan</h3>
+                  <p className="text-[11px] text-slate-500">{filteredAppointments.length} agenda ditemukan</p>
+                </div>
+                <CalendarDays size={16} className="text-slate-400" />
               </div>
-              {filteredAppointments.length ? filteredAppointments.map((appointment) => {
-                const customer = getCustomer(customers, appointment.customerId)
-                return <AppointmentRow key={appointment.id} appointment={appointment} customer={customer} onMap={() => showCustomerMap(customer)} onEdit={() => setModal({ type: 'appointment', appointment })} onVisit={() => setModal({ type: 'visit', appointment })} onDelete={() => deleteAppointment(appointment)} />
-              }) : <div className="px-6 pb-7 text-center text-xs text-slate-400">Belum ada kunjungan di tanggal ini.</div>}
+              {filteredAppointments.length > 0 ? (
+                filteredAppointments.map((appointment) => {
+                  const customer = getCustomer(customers, appointment.customerId)
+                  return (
+                    <AppointmentRow
+                      key={appointment.id}
+                      appointment={appointment}
+                      customer={customer}
+                      onMap={() => showCustomerMap(customer)}
+                      onEdit={() => setModal({ type: 'appointment', appointment })}
+                      onVisit={() => setModal({ type: 'visit', appointment })}
+                      onDelete={() => deleteAppointment(appointment)}
+                    />
+                  )
+                })
+              ) : (
+                <div className="py-12 text-center text-xs text-slate-400">
+                  Tidak ada jadwal yang cocok dengan filter yang dipilih.
+                </div>
+              )}
             </div>
           )}
         </section>
 
+        {/* Sidebar Widget: Pengingat & Prioritas */}
         <aside className="space-y-5">
-          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm shadow-slate-200/30">
-            <div className="flex items-start justify-between">
-              <div><h3 className="text-sm font-bold text-slate-900">Pengingat berikutnya</h3><p className="mt-1 text-[11px] text-slate-400">Agenda terdekat yang belum dikunjungi</p></div>
-              <span className="flex size-8 items-center justify-center rounded-lg bg-amber-50 text-amber-600"><AlarmClock size={16} /></span>
+          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
+                  Pengingat Terdekat
+                </h4>
+                <p className="text-[11px] text-slate-400">Agenda yang belum dikunjungi</p>
+              </div>
+              <AlarmClock size={16} className="text-amber-600" />
             </div>
-            <div className="mt-4 space-y-3">
-              {upcoming.length ? upcoming.map((appointment) => {
-                const customer = getCustomer(customers, appointment.customerId)
-                const isToday = appointment.date === today
-                return <div key={appointment.id} className="rounded-xl border border-slate-100 p-3">
-                  <div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold text-slate-800">{customer?.name || 'Nasabah dihapus'}</p>{appointment.priority === 'Tinggi' && <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[9px] font-semibold text-rose-600">Prioritas</span>}</div>
-                  <p className="mt-1.5 text-[10px] text-slate-500"><Clock3 className="mr-1 inline size-3" />{isToday ? 'Hari ini' : formatDate(appointment.date, { day: 'numeric', month: 'short' })} · {appointment.time}</p>
-                  <p className="mt-1.5 flex items-start gap-1 text-[10px] leading-4 text-slate-400"><MapPin className="mt-0.5 size-3 shrink-0" />{customer?.address || 'Lokasi tidak tersedia'}</p>
-                  {customer?.address && <button type="button" onClick={() => showCustomerMap(customer)} className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800"><Navigation size={12} />Lihat peta & buat rute</button>}
-                </div>
-              }) : <p className="rounded-lg bg-slate-50 px-3 py-4 text-center text-[11px] text-slate-400">Tidak ada pengingat aktif.</p>}
+
+            <div className="mt-3 space-y-2.5">
+              {upcoming.length > 0 ? (
+                upcoming.map((appointment) => {
+                  const customer = getCustomer(customers, appointment.customerId)
+                  const isToday = appointment.date === today
+                  return (
+                    <div key={appointment.id} className="rounded-lg border border-slate-100 p-2.5 hover:bg-slate-50/70 transition">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-xs font-semibold text-slate-900 truncate">
+                          {customer?.name || 'Nasabah dihapus'}
+                        </p>
+                        {appointment.priority === 'Tinggi' && (
+                          <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 border border-rose-200">
+                            Prio
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        <Clock3 className="mr-1 inline size-3 text-slate-400" />
+                        {isToday ? 'Hari Ini' : formatDate(appointment.date, { day: 'numeric', month: 'short' })} · {appointment.time}
+                      </p>
+                      {customer?.address && (
+                        <p className="mt-1 flex items-start gap-1 text-[10px] text-slate-400 line-clamp-1">
+                          <MapPin className="mt-0.5 size-3 shrink-0" />
+                          {customer.address}
+                        </p>
+                      )}
+                      {customer?.address && (
+                        <button
+                          type="button"
+                          onClick={() => showCustomerMap(customer)}
+                          className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#00529b] hover:underline"
+                        >
+                          <Navigation size={10} /> Lihat Rute & Peta
+                        </button>
+                      )}
+                    </div>
+                  )
+                })
+              ) : (
+                <p className="py-4 text-center text-xs text-slate-400">Tidak ada pengingat aktif.</p>
+              )}
             </div>
-            <div className="mt-4 flex items-start gap-2 rounded-lg bg-indigo-50 px-3 py-2.5 text-[10px] leading-4 text-indigo-700"><AlarmClock className="mt-0.5 size-3.5 shrink-0" />Pengingat terlihat di dashboard ini. Pastikan notifikasi perangkat aktif untuk pengingat di luar aplikasi.</div>
           </section>
-          <section className="rounded-2xl bg-slate-900 p-5 text-white">
-            <div className="flex items-center gap-2"><Route size={17} className="text-indigo-300" /><h3 className="text-sm font-bold">Prioritaskan perjalanan</h3></div>
-            <p className="mt-2 text-[11px] leading-5 text-slate-400">Tandai jadwal penting agar agenda lapanganmu lebih mudah diurutkan.</p>
-            <div className="mt-4 flex items-center gap-2 text-[10px] text-slate-300"><span className="size-2 rounded-full bg-rose-400" /> Prioritas tinggi <span className="ml-2 size-2 rounded-full bg-blue-400" /> Normal</div>
+
+          {/* Tips Info Card */}
+          <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-[#003b70]">
+            <div className="flex items-center gap-2 font-bold text-[#00529b]">
+              <Route size={15} />
+              <span>Prioritas Kunjungan Lapangan</span>
+            </div>
+            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
+              Check-in dapat dilakukan setelah tiba di lokasi nasabah. Data check-in GPS otomatis tervalidasi dalam radius radius bank.
+            </p>
+            <div className="mt-3 flex items-center gap-3 text-[10px] text-slate-500">
+              <span className="flex items-center gap-1">
+                <span className="size-2 rounded-full bg-rose-500" /> Prioritas Tinggi
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-2 rounded-full bg-[#00529b]" /> Normal
+              </span>
+            </div>
           </section>
         </aside>
       </div>
-      {modal?.type === 'appointment' && <AppointmentForm customers={customers} appointment={modal.appointment} date={modal.date} onClose={() => setModal(null)} onSubmit={saveAppointment} />}
-      {modal?.type === 'visit' && <VisitUpdateModal appointment={modal.appointment} customer={getCustomer(customers, modal.appointment.customerId)} onClose={() => setModal(null)} onSubmit={saveVisit} />}
-      {modal?.type === 'map' && <Suspense fallback={<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 text-sm text-white">Memuat peta...</div>}><RouteMapModal customer={modal.customer} onClose={() => setModal(null)} /></Suspense>}
+
+      {/* Modals */}
+      {modal?.type === 'appointment' && (
+        <AppointmentForm
+          customers={customers}
+          appointment={modal.appointment}
+          date={modal.date}
+          onClose={() => setModal(null)}
+          onSubmit={saveAppointment}
+        />
+      )}
+      {modal?.type === 'visit' && (
+        <VisitUpdateModal
+          appointment={modal.appointment}
+          customer={getCustomer(customers, modal.appointment.customerId)}
+          onClose={() => setModal(null)}
+          onSubmit={saveVisit}
+          onScheduleFollowUp={onSaveFollowUp}
+        />
+      )}
+      {modal?.type === 'map' && (
+        <Suspense fallback={<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 text-sm text-white">Memuat peta...</div>}>
+          <RouteMapModal customer={modal.customer} onClose={() => setModal(null)} />
+        </Suspense>
+      )}
     </>
   )
 }
 
 function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelete }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 px-4 py-3.5 sm:px-5">
-      <div className="flex size-10 shrink-0 flex-col items-center justify-center rounded-xl bg-slate-50 text-slate-600"><span className="text-[10px] font-bold">{appointment.time}</span><span className="mt-0.5 text-[8px] text-slate-400">{appointment.priority === 'Tinggi' ? 'PRIO' : 'AGENDA'}</span></div>
-      <div className="min-w-[140px] flex-1"><p className="text-xs font-semibold text-slate-800">{customer?.name || 'Nasabah dihapus'}</p><p className="mt-1 text-[10px] text-slate-500">{appointment.purpose} · {formatDate(appointment.date, { day: 'numeric', month: 'short' })}</p><p className="mt-1 flex items-start gap-1 text-[10px] leading-4 text-slate-400"><MapPin size={10} className="mt-0.5 shrink-0" />{customer?.address || 'Lokasi tidak tersedia'}</p>{customer?.address && <button type="button" onClick={onMap} className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800"><Navigation size={11} />Lihat peta & buat rute</button>}</div>
-      <StatusBadge status={appointment.status} />
-      <div className="flex items-center gap-1">
-        {appointment.status === 'Terjadwal' && <button onClick={onVisit} className="rounded-lg bg-indigo-50 px-2.5 py-2 text-[10px] font-semibold text-indigo-700 hover:bg-indigo-100">Check-in</button>}
-        <button onClick={onEdit} aria-label="Ubah jadwal" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-indigo-600"><Pencil size={14} /></button>
-        <button onClick={onDelete} aria-label="Hapus jadwal" className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={14} /></button>
-        <button aria-label="Opsi lain" className="hidden rounded-lg p-2 text-slate-300 sm:block"><MoreHorizontal size={14} /></button>
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50/70 transition">
+      <div className="flex items-start gap-3 min-w-0">
+        <div className="w-12 shrink-0 pt-0.5 text-xs font-bold tabular-nums text-slate-700">
+          {appointment.time}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-bold text-slate-900">
+              {customer?.name || 'Nasabah dihapus'}
+            </span>
+            <StatusBadge status={appointment.status} />
+            {appointment.priority === 'Tinggi' && (
+              <span className="rounded bg-rose-50 px-1.5 py-0.2 text-[9px] font-bold text-rose-600 border border-rose-200">
+                Prio
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[11px] text-slate-500 truncate">
+            {appointment.purpose}
+            {customer?.address && (
+              <>
+                <span className="mx-1 text-slate-300">·</span>
+                <MapPin className="mb-0.5 inline size-3 text-slate-400" /> {customer.address}
+              </>
+            )}
+          </p>
+          {customer?.address && (
+            <button
+              type="button"
+              onClick={onMap}
+              className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#00529b] hover:underline"
+            >
+              <Navigation size={10} /> Peta Lokasi
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-1.5 shrink-0">
+        {appointment.status === 'Terjadwal' && (
+          <button
+            type="button"
+            onClick={onVisit}
+            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-[#00529b] shadow-xs hover:bg-[#eaf3fb] hover:border-[#00529b] transition"
+          >
+            Check-in
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onEdit}
+          title="Ubah Jadwal"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+        >
+          <Pencil size={14} />
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          title="Hapus Jadwal"
+          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   )

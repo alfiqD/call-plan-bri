@@ -70,10 +70,10 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
             <option>Tinggi</option>
           </select>
         </label>
-        <p className="rounded-lg bg-indigo-50 px-3 py-2 text-[11px] leading-5 text-indigo-700">Jadwal dan lokasi hanya untuk perencanaan kunjungan, tidak mencatat target uang atau nominal kredit.</p>
+        <p className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#00529b]">Jadwal dan lokasi hanya untuk perencanaan kunjungan, tidak mencatat target uang atau nominal kredit.</p>
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
           <button type="button" onClick={onClose} className="button-secondary">Batal</button>
-          <button type="submit" className="button-primary">{appointment ? 'Simpan perubahan' : 'Simpan jadwal'}</button>
+          <button type="submit" className="button-orange">{appointment ? 'Simpan perubahan' : 'Simpan jadwal'}</button>
         </div>
       </form>
     </Modal>
