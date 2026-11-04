@@ -1,5 +1,5 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
-import { LoaderCircle, RefreshCw, ShieldAlert } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { LoaderCircle, RefreshCw } from 'lucide-react'
 import AppShell from './components/AppShell'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/useAuth'
@@ -43,15 +43,15 @@ const pages = {
   'admin-users': AdminUsersPage,
   'audit-log': AuditLogPage,
 }
+const adminOnlyPages = ['admin-users', 'audit-log']
 
 function MainWorkspace() {
-  const { user, profile, isApproved, isAdmin, isRM, role, isConfigured } = useAuth()
+  const { user, profile, isApproved, isAdmin, isRM, role } = useAuth()
   const [workspace, setWorkspace] = useState(null)
   const [activePage, setActivePage] = useState('dashboard')
   const [toast, setToast] = useState('')
   const [backendError, setBackendError] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [hideNotice, setHideNotice] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
 
   // Build a safe currentUser object for passing into service calls (audit attribution, RLS)
@@ -63,18 +63,17 @@ function MainWorkspace() {
     role: profile?.role || 'rm',
   }), [user?.id, user?.email, profile?.nama, profile?.role])
 
-  const adminOnly = ['admin-users', 'audit-log']
-  const effectivePage = (adminOnly.includes(activePage) && !isAdmin) ? 'dashboard' : activePage
+  const effectivePage = (adminOnlyPages.includes(activePage) && !isAdmin) ? 'dashboard' : activePage
   const Page = pages[effectivePage] || DashboardPage
 
-  const handleNavigate = (targetPage) => {
-    if (adminOnly.includes(targetPage) && !isAdmin) {
+  const handleNavigate = useCallback((targetPage) => {
+    if (adminOnlyPages.includes(targetPage) && !isAdmin) {
       setToast('Akses ditolak: Halaman ini hanya dapat diakses oleh Administrator.')
       setActivePage('dashboard')
       return
     }
     setActivePage(targetPage)
-  }
+  }, [isAdmin])
 
   useEffect(() => {
     let isActive = true
@@ -83,11 +82,10 @@ function MainWorkspace() {
       setIsLoading(true)
       setBackendError('')
       try {
-        // Pass currentUser for RM data isolation in local/mock mode.
-        // Supabase RLS enforces isolation server-side based on auth.uid().
+        // Nasabah are shared by approved RMs within this branch app; RLS enforces the same scope in Supabase.
         const filterUser = isAdmin ? null : { id: user?.id, role: profile?.role || 'rm' }
         const [customers, appointments, followUps] = await Promise.all([
-          fetchCustomers(filterUser),
+          fetchCustomers(),
           fetchAppointments(filterUser),
           fetchFollowUps(filterUser),
         ])
@@ -106,7 +104,7 @@ function MainWorkspace() {
     return () => {
       isActive = false
     }
-  }, [reloadKey, user?.id])
+  }, [reloadKey, user?.id, isAdmin, profile?.role])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -242,7 +240,7 @@ function MainWorkspace() {
       urgentFollowUpCount={urgentFollowUpCount}
       notificationState={notificationState}
     >
-      {!isConfigured && !hideNotice && (
+      {/* {!isConfigured && !hideNotice && (
         <div className="mb-6 flex items-start justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-xs leading-5 text-blue-900 shadow-sm">
           <div className="flex items-start gap-2.5">
             <ShieldAlert className="mt-0.5 size-4 shrink-0 text-blue-600" />
@@ -262,7 +260,7 @@ function MainWorkspace() {
             ✕
           </button>
         </div>
-      )}
+      )} */}
 
       {backendError ? (
         <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
@@ -296,6 +294,7 @@ function MainWorkspace() {
             isAdmin={isAdmin}
             isRM={isRM}
             role={role}
+            currentUserId={currentUser.id}
             isApproved={isApproved}
           />
         </Suspense>
@@ -312,31 +311,33 @@ function MainWorkspace() {
 }
 
 function AppContent() {
-  const { user, isApproved, isLoading, isConfigured } = useAuth()
+  const { user, isApproved, isLoading } = useAuth()
   const [authView, setAuthView] = useState('login')
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f4f7fb] text-slate-500">
-        <LoaderCircle className="mr-2 size-6 animate-spin text-indigo-600" />
-        <span className="text-sm font-semibold">Memeriksa autentikasi...</span>
+      <div className="flex min-h-screen items-center justify-center bg-[#002D62] text-white">
+        <div className="text-center">
+          <LoaderCircle className="mx-auto size-8 animate-spin text-[#f37021]" />
+          <p className="mt-3 text-sm font-semibold tracking-wide">Memuat Sistem Call Plan BRI...</p>
+        </div>
       </div>
     )
   }
 
-  // If Supabase is configured and user is not logged in:
-  if (isConfigured && !user) {
+  // If user is not logged in:
+  if (!user) {
     if (authView === 'register') return <RegisterPage onNavigate={setAuthView} />
     if (authView === 'forgot-password') return <ForgotPasswordPage onNavigate={setAuthView} />
     return <LoginPage onNavigate={setAuthView} />
   }
 
-  // If Supabase is configured and user is logged in, but not approved yet:
-  if (isConfigured && user && !isApproved) {
+  // If user is logged in, but not approved yet:
+  if (user && !isApproved) {
     return <PendingApprovalPage />
   }
 
-  // Authenticated & Approved workspace (or dev preview mode when unconfigured)
+  // Authenticated & Approved workspace
   return <MainWorkspace />
 }
 

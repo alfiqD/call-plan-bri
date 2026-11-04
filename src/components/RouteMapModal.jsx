@@ -74,10 +74,6 @@ function RouteMapModal({ customer, onClose }) {
     ? { lat: Number(customer.latitude), lng: Number(customer.longitude) }
     : null
   const mapLinks = getMapLinks(customer)
-  const hasDestination = hasCoordinates || Boolean(customer.address?.trim())
-  const googleMapsRouteUrl = hasDestination
-    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(hasCoordinates ? `${customer.latitude},${customer.longitude}` : customer.address)}&travelmode=driving`
-    : ''
   const googleMapsPlaceUrl = hasCoordinates
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${customer.latitude},${customer.longitude}`)}`
     : mapLinks.googleMaps
@@ -108,7 +104,6 @@ function RouteMapModal({ customer, onClose }) {
         {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
         <p className="text-[10px] leading-4 text-slate-400">Peta memakai OpenStreetMap; rute berkendara meminta layanan OSRM publik. Untuk prototipe ini, gunakan data demo—jangan kirim lokasi nasabah nyata.</p>
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onClose} className="button-secondary">Tutup</button>
           <a
             href={mapLinks.openStreetMap}
             target="_blank"
@@ -124,18 +119,6 @@ function RouteMapModal({ customer, onClose }) {
             className="button-secondary"
           >
             <ExternalLink size={14} />Lihat di Google Maps
-          </a>
-          <a
-            href={googleMapsRouteUrl || undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-disabled={!hasDestination}
-            onClick={(event) => {
-              if (!hasDestination) event.preventDefault()
-            }}
-            className={`button-secondary ${!hasDestination ? 'pointer-events-none opacity-50' : ''}`}
-          >
-            <ExternalLink size={14} /><Route size={14} />Rute Google Maps
           </a>
           {hasCoordinates && <a href={mapLinks.streetView} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Street View</a>}
           <button type="button" onClick={createRoute} disabled={!hasCoordinates || isLoading} className="button-primary disabled:cursor-not-allowed disabled:opacity-50">

@@ -4,10 +4,10 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
+  Camera,
   ChevronDown,
   Clock3,
   MapPin,
-  MoreHorizontal,
   Navigation,
   Pencil,
   Plus,
@@ -126,12 +126,12 @@ function SchedulePage({
 
       {/* Toolbar: Month Navigation, Status Filter, View Toggle */}
       <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={() => changeMonth(-1)}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 transition"
+              className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition"
               aria-label="Bulan sebelumnya"
             >
               <ArrowLeft size={16} />
@@ -150,7 +150,7 @@ function SchedulePage({
             <button
               type="button"
               onClick={() => changeMonth(1)}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 transition"
+              className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition"
               aria-label="Bulan berikutnya"
             >
               <ArrowRight size={16} />
@@ -169,7 +169,7 @@ function SchedulePage({
               className="form-control h-8 min-w-36 appearance-none pr-8 text-xs font-medium"
               aria-label="Filter status kunjungan"
             >
-              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui'].map((status) => (
+              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
@@ -209,7 +209,7 @@ function SchedulePage({
           {view === 'calendar' ? (
             <>
               {/* Day Headers */}
-              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
                 {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => (
                   <div className="py-2.5" key={day}>{day}</div>
                 ))}
@@ -226,7 +226,8 @@ function SchedulePage({
                       key={key}
                       type="button"
                       onClick={() => setSelectedDate(key)}
-                      className={`min-h-[75px] border-b border-r border-slate-100 p-1.5 text-left transition sm:min-h-[90px] sm:p-2 ${
+                      aria-label={`${formatDate(key, { day: 'numeric', month: 'long', year: 'numeric' })}, ${dayAppointments.length} agenda`}
+                      className={`min-h-[58px] border-b border-r border-slate-100 p-0.5 text-left transition sm:min-h-[90px] sm:p-2 ${
                         !inMonth ? 'bg-slate-50/40 text-slate-300' : 'text-slate-700'
                       } ${
                         selected
@@ -234,12 +235,12 @@ function SchedulePage({
                           : 'hover:bg-slate-50'
                       }`}
                     >
-                      <span className={`inline-flex size-6 items-center justify-center rounded-full text-xs font-semibold ${
+                      <span className={`inline-flex size-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${
                         isToday ? 'bg-[#00529b] text-white font-bold' : ''
                       }`}>
                         {date.getDate()}
                       </span>
-                      <div className="mt-1 space-y-1">
+                      <div className="mt-1 hidden space-y-1 sm:block">
                         {dayAppointments.slice(0, 2).map((appointment) => {
                           const cust = getCustomer(customers, appointment.customerId)
                           const statusBg = appointment.status === 'Selesai'
@@ -257,6 +258,22 @@ function SchedulePage({
                             </div>
                           )
                         })}
+                        {dayAppointments.length > 0 && (
+                          <span className="mt-1 flex justify-center gap-0.5 sm:hidden" aria-hidden="true">
+                            {dayAppointments.slice(0, 3).map((appointment) => (
+                              <span
+                                key={appointment.id}
+                                className={`size-1 rounded-full ${
+                                  appointment.status === 'Selesai'
+                                    ? 'bg-emerald-500'
+                                    : appointment.status === 'Reschedule'
+                                      ? 'bg-amber-500'
+                                      : 'bg-[#00529b]'
+                                }`}
+                              />
+                            ))}
+                          </span>
+                        )}
                         {dayAppointments.length > 2 && (
                           <span className="block px-1 text-[9px] text-slate-400 font-medium">
                             +{dayAppointments.length - 2} lainnya
@@ -282,7 +299,7 @@ function SchedulePage({
                   <button
                     type="button"
                     onClick={() => setModal({ type: 'appointment', date: selectedDate })}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                    className="inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
                   >
                     <Plus size={13} /> Tambah Agenda
                   </button>
@@ -471,6 +488,11 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
                 Prio
               </span>
             )}
+            {(appointment.locationPhoto || appointment.documentationPhoto || appointment.evidence) && (
+              <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600 border border-slate-200" title="Ada lampiran foto bukti">
+                <Camera size={10} className="text-[#00529b]" /> Foto
+              </span>
+            )}
           </div>
           <p className="mt-0.5 text-[11px] text-slate-500 truncate">
             {appointment.purpose}
@@ -493,21 +515,29 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-1.5 shrink-0">
-        {appointment.status === 'Terjadwal' && (
+      <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto sm:shrink-0">
+        {appointment.status === 'Terjadwal' ? (
           <button
             type="button"
             onClick={onVisit}
-            className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-[#00529b] shadow-xs hover:bg-[#eaf3fb] hover:border-[#00529b] transition"
+            className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-[#00529b] shadow-xs hover:bg-[#eaf3fb] hover:border-[#00529b] transition sm:flex-none"
           >
             Check-in
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onVisit}
+            className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-white hover:text-[#00529b] hover:border-[#00529b] transition sm:flex-none"
+          >
+            Hasil Kunjungan
           </button>
         )}
         <button
           type="button"
           onClick={onEdit}
           title="Ubah Jadwal"
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
         >
           <Pencil size={14} />
         </button>
@@ -515,7 +545,7 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
           type="button"
           onClick={onDelete}
           title="Hapus Jadwal"
-          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+          className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
         >
           <Trash2 size={14} />
         </button>

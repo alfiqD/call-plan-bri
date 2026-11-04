@@ -46,7 +46,7 @@ function LocationMap({
       center={center}
       zoom={15}
       scrollWheelZoom
-      style={{ height }}
+      style={{ height: `clamp(220px, 45vh, ${height})` }}
       className={`w-full rounded-xl ${className}`}
     >
       <MapViewport center={center} />

@@ -248,7 +248,7 @@ function AuditLogPage({ isAdmin, onNavigate }) {
           </div>
 
           {/* Date Range */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             <input
               type="date"
               value={startDate}

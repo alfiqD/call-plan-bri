@@ -4,6 +4,25 @@ const rawUrl = (import.meta?.env?.VITE_SUPABASE_URL || '').trim()
 export const SUPABASE_URL = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
 const SUPABASE_ANON_KEY = (import.meta?.env?.VITE_SUPABASE_ANON_KEY || '').trim()
 
+export function createSupabaseAuthStorage(localStorage, sessionStorage) {
+  return {
+    getItem: async (key) => sessionStorage.getItem(key) ?? localStorage.getItem(key),
+    setItem: async (key, value) => {
+      if (sessionStorage.getItem('cp_session_only') === '1') {
+        sessionStorage.setItem(key, value)
+        localStorage.removeItem(key)
+      } else {
+        localStorage.setItem(key, value)
+        sessionStorage.removeItem(key)
+      }
+    },
+    removeItem: async (key) => {
+      localStorage.removeItem(key)
+      sessionStorage.removeItem(key)
+    },
+  }
+}
+
 /**
  * Validates whether Supabase environment variables are properly provided
  * and not default unconfigured placeholders.
@@ -29,6 +48,9 @@ export const supabase = isSupabaseConfigured()
       autoRefreshToken: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
+      ...(typeof window !== 'undefined'
+        ? { storage: createSupabaseAuthStorage(window.localStorage, window.sessionStorage) }
+        : {}),
     },
   })
   : null

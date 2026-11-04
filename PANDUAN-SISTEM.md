@@ -1,35 +1,26 @@
 # Panduan Sistem CallPlan
 
-Dokumen ini menjelaskan aplikasi CallPlan untuk membantu Relationship Manager (RM) mengelola data nasabah, merencanakan kunjungan, mencatat hasil pertemuan, dan melihat laporan aktivitas.
+Dokumen ini menjelaskan aplikasi CallPlan untuk membantu Relationship Manager (RM) mengelola data nasabah, merencanakan kunjungan mingguan, mencatat hasil pertemuan, dan memantau realisasi kunjungan.
 
 ## 1. Gambaran umum
 
-CallPlan terdiri dari dua aplikasi yang berjalan terpisah:
+CallPlan menggunakan frontend React yang terhubung langsung ke Supabase:
 
-1. **Frontend**: React untuk menampilkan halaman dan menerima tindakan pengguna.
-2. **Backend**: Laravel REST API untuk memvalidasi permintaan dan membaca atau menyimpan data.
-3. **Database**: SQLite untuk menyimpan data nasabah dan jadwal.
+1. **Frontend**: React + Vite untuk menampilkan halaman dan menerima tindakan pengguna.
+2. **Backend terkelola**: Supabase Auth, PostgreSQL, Row Level Security (RLS), RPC, dan Storage.
 
 ```text
 Pengguna
    │
    ▼
-Frontend React + Vite (http://localhost:5173)
-   │ HTTP/JSON melalui /api
-   ▼
-Backend Laravel (http://127.0.0.1:8000)
-   │ Eloquent ORM
-   ▼
-Database SQLite
+React + Vite
+   │ Supabase client (anon key + sesi pengguna)
+   ├── Supabase Auth
+   ├── PostgreSQL + RLS / RPC
+   └── Supabase Storage
 ```
 
-Frontend dan backend berada di folder berbeda:
-
-```text
-Tracking Nasabah/
-├── Call-Plan/       # Frontend React
-└── Call-Plan-API/   # Backend Laravel
-```
+Kredensial Service Role tidak boleh digunakan di frontend. Pembatasan akses data dijalankan oleh RLS dan fungsi database.
 
 ## 2. Teknologi yang digunakan
 
@@ -41,9 +32,10 @@ Tracking Nasabah/
 | Lucide React | Ikon pada navigasi, tombol, dan informasi. |
 | Leaflet + React Leaflet | Menampilkan peta OpenStreetMap. |
 | Google Maps JavaScript API | Peta dan geocoding Google jika API key disediakan. |
-| Laravel | Menyediakan endpoint REST, validasi data, dan aturan check-in. |
-| Eloquent ORM | Menghubungkan model Laravel dengan tabel database. |
-| SQLite | Database lokal dalam satu file. |
+| Supabase Auth | Autentikasi pengguna dan sesi. |
+| Supabase PostgreSQL | Menyimpan profil, nasabah, jadwal kunjungan, follow-up, serta audit. |
+| Supabase RLS dan RPC | Membatasi akses data dan memvalidasi check-in di server. |
+| Supabase Storage | Menyimpan dokumentasi kunjungan. |
 | Nominatim / OpenStreetMap | Pencarian alamat dan alamat berdasarkan koordinat. |
 | OSRM | Menghitung rute jalan pada peta. |
 
@@ -74,6 +66,7 @@ src/
 │   └── ReportsPage.jsx
 ├── services/
 │   ├── jadwalKunjungan.js
+│   ├── visitMetrics.js
 │   ├── geocoding.js
 │   ├── googleMaps.js
 │   ├── mapRouting.js
@@ -83,43 +76,20 @@ src/
 ```
 
 - `main.jsx` memasang React ke halaman HTML dan memuat CSS utama.
-- `App.jsx` memilih halaman, memuat data dari Laravel, dan menyediakan operasi simpan/hapus kepada halaman.
+- `App.jsx` memilih halaman, memuat data Supabase, dan menyediakan operasi simpan/hapus kepada halaman.
 - `AppShell.jsx` dan `Sidebar.jsx` membentuk kerangka aplikasi dan navigasi.
 - `pages/` berisi empat halaman utama. Halaman dimuat secara malas dengan `React.lazy` agar kode halaman dapat dipisahkan.
 - `components/` berisi elemen antarmuka yang digunakan di berbagai halaman, seperti form, modal, peta, dan label status.
-- `services/` menangani komunikasi API dan layanan peta.
-- `data/workspace.js` berisi helper tanggal dan data demo. Jalur utama aplikasi saat ini mengambil data dari API; helper data demo/local storage di file ini bukan sumber data utama yang sedang dipakai `App.jsx`.
+- `services/` menangani akses Supabase, autentikasi, GPS, penyimpanan foto, audit, dan layanan peta.
+- `visitMetrics.js` memisahkan hitungan rencana mingguan dari realisasi berdasarkan waktu check-in.
+- `data/workspace.js` menyediakan helper tanggal serta data demo/local storage untuk mode demonstrasi.
 - `index.css` mengatur gaya global dan tombol/form bersama. Tema antarmuka saat ini memakai putih, biru, dan aksen oranye.
-
-### Backend: `Call-Plan-API/`
-
-```text
-app/
-├── Http/
-│   ├── Controllers/Api/
-│   ├── Requests/
-│   └── Resources/
-└── Models/
-routes/
-└── api.php
-database/
-└── migrations/
-```
-
-- `routes/api.php` mendaftarkan endpoint API.
-- `Controllers/Api/` menjalankan operasi daftar, tambah, ubah, hapus, dan check-in.
-- `Requests/` memeriksa format dan aturan input sebelum controller memprosesnya.
-- `Resources/` menentukan bentuk JSON yang dikirim ke frontend.
-- `Models/` mewakili tabel dan hubungan antardata.
-- `database/migrations/` mendefinisikan struktur dan perubahan tabel database.
 
 ## 4. Halaman dan fungsi
 
 ### Dashboard
 
-Menampilkan ringkasan agenda hari ini, jumlah kunjungan selesai, jadwal ulang, agenda hari ini, rute prioritas, dan jumlah nasabah. Ringkasan yang ditampilkan dashboard dihitung dari data nasabah dan jadwal yang sudah dimuat frontend.
-
-Backend juga memiliki endpoint ringkasan tersendiri, tetapi halaman dashboard saat ini tidak memanggil endpoint tersebut.
+Dashboard RM dan Admin menyediakan ringkasan jadwal yang direncanakan, realisasi kunjungan berstatus Selesai, jadwal yang masih Terjadwal, Reschedule, dan Tidak ditemui. Ringkasan mingguan memisahkan jumlah jadwal dari jumlah realisasi; tidak ada kuota jumlah kunjungan tetap.
 
 ### Data Nasabah
 
@@ -154,31 +124,31 @@ Satu jadwal merujuk ke satu nasabah melalui `nasabah_id`, dengan informasi:
 - `tanggal`, `waktu`, `tujuan`, `prioritas`.
 - `status` dan `catatan_hasil`.
 - `check_in_at`, `check_in_latitude`, `check_in_longitude` setelah check-in sukses.
+- `foto_lokasi` dan `foto_kunjungan` untuk dua jenis dokumentasi terpisah.
 
 Hubungannya adalah **satu nasabah mempunyai banyak jadwal**. Penghapusan nasabah menggunakan soft delete agar data dan hubungan riwayat tetap tersedia; penghapusan jadwal menghapus data jadwal melalui API.
 
 Status yang digunakan:
 
-| Tampilan aplikasi | Nilai yang disimpan API |
+| Tampilan aplikasi | Nilai yang disimpan di PostgreSQL |
 |---|---|
 | Terjadwal | `pending` |
 | Selesai | `selesai` |
 | Reschedule | `reschedule` |
 | Tidak ditemui | `tidak_ditemui` |
+| Batal | `batal` |
 
-Frontend menggunakan nama field yang mudah dibaca, misalnya `name` dan `date`. API menggunakan nama field database, misalnya `nama` dan `tanggal`. `jadwalKunjungan.js` menerjemahkan data di antara kedua bentuk tersebut.
+Status `Execute` dan `Gagal` belum diterapkan karena definisi operasionalnya perlu dikonfirmasi BRI. Nilai status historis tidak boleh dihapus atau digabung tanpa pemetaan yang disetujui. Frontend menerjemahkan nama field database seperti `tanggal` dan `rm_id` ke field yang digunakan komponen.
 
 ## 6. Alur utama sistem
 
 ### Saat aplikasi dibuka
 
 1. `main.jsx` menjalankan React.
-2. `App.jsx` memeriksa apakah `VITE_API_BASE_URL` tersedia.
-3. Frontend meminta daftar `/nasabah` dan `/jadwal-kunjungan` dari Laravel secara bersamaan.
-4. Laravel memvalidasi filter, membaca data SQLite, lalu mengirim JSON.
-5. Daftar API dipaginasi, 15 data per halaman. Frontend meminta halaman berikutnya sampai semua data terkumpul.
-6. Data API diterjemahkan ke bentuk yang digunakan komponen React.
-7. Jika API gagal, frontend menampilkan pesan error dan tombol **Coba lagi**; ia tidak diam-diam mengganti data dengan data demo.
+2. `AuthContext.jsx` memulihkan sesi Supabase dan memuat profil.
+3. Halaman meminta data melalui Supabase client; RLS membatasi baris yang dapat dibaca.
+4. Data diterjemahkan ke bentuk yang digunakan komponen React.
+5. Jika backend gagal, aplikasi menampilkan pesan error dan tombol **Coba lagi**.
 
 ### Saat menambah atau mengubah data
 
@@ -187,28 +157,24 @@ Form React
   → fungsi pada halaman
   → handler data pada App.jsx
   → service jadwalKunjungan.js
-  → endpoint Laravel
-  → Form Request memvalidasi
-  → Controller menyimpan ke SQLite
-  → Resource mengirim JSON
-  → service mengubah JSON ke bentuk frontend
+  → Supabase client
+  → PostgreSQL / RLS / RPC
+  → service mengubah data ke bentuk frontend
   → state React diperbarui
 ```
 
-- Data baru dikirim dengan `POST`.
-- Data yang sudah ada dikirim dengan `PATCH`.
-- Hapus nasabah dan jadwal dilakukan dengan `DELETE`.
-- Laravel dapat mengirim error validasi dalam JSON; frontend menampilkan pesan error tersebut.
+- Operasi data menggunakan tabel Supabase yang sesuai; nonaktifkan nasabah dilakukan dengan soft delete.
+- Error dari Supabase ditampilkan oleh halaman pemanggil.
 
 ### Saat check-in selesai
 
 1. RM membuka form hasil kunjungan dan memilih status **Selesai**.
 2. Catatan hasil wajib diisi; lokasi nasabah juga harus memiliki koordinat.
 3. Browser meminta izin GPS. Akurasi GPS perangkat harus memadai untuk batas validasi 100 meter.
-4. Frontend mengirim latitude, longitude, dan catatan ke endpoint check-in.
-5. Laravel memeriksa bahwa jadwal belum selesai dan masih berstatus `pending`, lokasi nasabah tersedia, serta jarak koordinat RM ke nasabah tidak lebih dari 100 meter.
-6. Jika semua syarat lolos, Laravel mengubah status menjadi `selesai` dan menyimpan catatan, waktu, serta koordinat check-in.
-7. Jika pengguna memilih **Reschedule** atau **Tidak ditemui**, frontend memperbarui status/catatan melalui endpoint jadwal biasa; opsi Reschedule juga mengirim tanggal dan waktu baru.
+4. Frontend mengirim latitude, longitude, dan catatan ke RPC `check_in_visit`.
+5. PostgreSQL memeriksa kepemilikan jadwal, status, koordinat nasabah, dan jarak maksimal 100 meter.
+6. Jika semua syarat lolos, RPC menyimpan status `selesai`, catatan, waktu, serta koordinat check-in.
+7. Jika pengguna memilih **Reschedule** atau **Tidak ditemui**, layanan memperbarui status/catatan; Reschedule juga mengubah tanggal dan waktu jadwal.
 
 Perhitungan jarak dilakukan di backend menggunakan rumus Haversine. Pemeriksaan di server tetap menjadi penentu; pemeriksaan GPS di browser membantu memberi umpan balik sebelum permintaan dikirim.
 
@@ -222,81 +188,37 @@ Perhitungan jarak dilakukan di backend menggunakan rumus Haversine. Pemeriksaan 
 
 Pencarian alamat/rute membutuhkan koneksi internet. Lokasi browser biasanya memerlukan izin pengguna dan konteks `localhost` atau HTTPS.
 
-## 7. Endpoint API
+## 7. Tabel dan kontrol akses Supabase
 
-Semua endpoint berikut memakai awalan `/api`.
+| Tabel/objek | Fungsi |
+|---|---|
+| `profiles` | Profil pengguna, role (`admin`/`rm`), approval, dan wilayah. |
+| `nasabahs` | Satu sumber data nasabah dengan koordinat dan soft delete. |
+| `jadwal_kunjungans` | Jadwal, penanggung jawab, status, check-in, dan dua referensi foto. |
+| `jadwal_history` | Riwayat perubahan jadwal dan reschedule. |
+| `follow_ups` | Pengingat tindak lanjut yang terpisah dari realisasi kunjungan. |
+| `audit_logs` | Aktivitas sistem yang dapat dibaca Admin sesuai RLS. |
+| Storage `visit-evidence` | Berkas foto bukti kunjungan. |
 
-| Metode | Endpoint | Fungsi |
-|---|---|---|
-| `GET` | `/dashboard/ringkasan?tanggal=YYYY-MM-DD` | Mengambil hitungan jadwal untuk satu tanggal. |
-| `GET` | `/nasabah` | Mengambil daftar nasabah; mendukung pencarian `q` dan pagination. |
-| `POST` | `/nasabah` | Membuat nasabah baru. |
-| `GET` | `/nasabah/{id}` | Mengambil satu nasabah. |
-| `PATCH` | `/nasabah/{id}` | Memperbarui nasabah. |
-| `DELETE` | `/nasabah/{id}` | Menonaktifkan nasabah (soft delete). |
-| `GET` | `/jadwal-kunjungan` | Mengambil daftar jadwal; mendukung filter tanggal, rentang tanggal, status, dan pagination. |
-| `POST` | `/jadwal-kunjungan` | Membuat jadwal dengan status awal `pending`. |
-| `GET` | `/jadwal-kunjungan/{id}` | Mengambil satu jadwal. |
-| `PATCH` | `/jadwal-kunjungan/{id}` | Memperbarui jadwal atau hasil yang bukan check-in selesai. |
-| `DELETE` | `/jadwal-kunjungan/{id}` | Menghapus jadwal. |
-| `POST` | `/jadwal-kunjungan/{id}/check-in` | Memvalidasi GPS dan menyimpan check-in selesai. |
-
-Contoh body tambah jadwal:
-
-```json
-{
-  "nasabah_id": 1,
-  "tanggal": "2026-10-28",
-  "waktu": "09:30",
-  "tujuan": "Kunjungan Prospek",
-  "prioritas": "normal"
-}
-```
-
-Contoh body check-in:
-
-```json
-{
-  "latitude": -6.2,
-  "longitude": 106.8,
-  "catatan_hasil": "Bertemu langsung dengan nasabah."
-}
-```
+Admin dapat memantau jadwal lintas RM sesuai RLS; setiap RM hanya dapat membaca dan mengelola jadwal miliknya. RM yang sudah disetujui dapat membaca basis nasabah bersama di aplikasi KCP Iskandar, sedangkan pengubahan nasabah tetap terbatas pada pembuatnya dan Admin. Akses baca nasabah bersama diterapkan oleh migrasi `20261103000001_allow_approved_rms_to_read_shared_customers.sql`; jangan gunakan konfigurasi ini untuk deployment multi-cabang tanpa pembatasan cabang.
 
 ## 8. Cara menjalankan di komputer lokal
 
-Jalankan frontend dan backend pada dua terminal terpisah.
-
-### Backend Laravel
-
-Di PowerShell:
+Atur URL proyek Supabase dan anon key di `.env` lokal:
 
 ```powershell
-Set-Location "C:\SEMESTER 5 ALFIQ\Tracking Nasabah\Call-Plan-API"
-$env:PHP_INI_SCAN_DIR = (Join-Path (Get-Location) "php-conf")
-php artisan migrate
-php artisan serve --host=127.0.0.1 --port=8000
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-`PHP_INI_SCAN_DIR` mengaktifkan ekstensi SQLite dari konfigurasi proyek lokal untuk PHP. Biarkan terminal server tetap berjalan. Migrasi membuat atau memperbarui struktur database.
-
-### Frontend React
-
-Di terminal PowerShell lain:
+Jalankan frontend:
 
 ```powershell
-Set-Location "C:\SEMESTER 5 ALFIQ\Tracking Nasabah\Call-Plan"
 npm install
 npm run dev
 ```
 
-Buka alamat Vite yang ditampilkan di terminal, biasanya `http://localhost:5173`. Alamat API di file `.env` frontend harus menunjuk ke:
-
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8000/api
-```
-
-Setelah mengubah `.env`, restart server Vite. CORS backend sudah mengizinkan origin lokal Vite `localhost`/`127.0.0.1` pada port 5173 dan 5174.
+Jangan menambahkan Service Role Key ke variabel `VITE_*` atau bundle frontend. Jalankan migrasi Supabase sesuai urutan pada `supabase/migrations/` setelah meninjau dampaknya dan memastikan proyek tujuan yang benar.
 
 ## 9. Pemeriksaan proyek
 
@@ -312,12 +234,10 @@ npm run build
 
 ## 10. Batasan dan hal yang perlu dipahami
 
-- API CRUD saat ini belum mewajibkan autentikasi/otorisasi RM. Endpoint `/api/user` memakai Sanctum, tetapi operasi nasabah dan jadwal yang digunakan frontend belum dilindungi login.
+- Operasi data utama menggunakan Supabase Auth dan RLS. Pastikan migrasi/policy aktif pada proyek sebelum menggunakan data operasional.
 - Nomor rekening ditampilkan tersamarkan di daftar, tetapi penyimpanan database belum menerapkan enkripsi khusus. Penyamaran di layar bukan enkripsi.
-- Jangan gunakan data nasabah atau nomor rekening asli sampai keamanan, akses pengguna, penyimpanan, dan kebijakan data organisasi disetujui.
-- Foto bukti dapat dipilih pada form, tetapi belum diunggah atau disimpan oleh backend. Foto tidak dijamin tetap ada setelah halaman dimuat ulang.
+- Foto lokasi dan dokumentasi disimpan dalam field terpisah. Hak akses bucket Storage harus ditinjau sebelum menyimpan dokumentasi nasabah yang sebenarnya.
 - Pengingat saat ini berupa informasi di dalam aplikasi; belum mengirim notifikasi ke perangkat.
 - Peta dan geocoding mengirim alamat/koordinat ke penyedia layanan eksternal yang dipilih. Rute jalan menggunakan layanan OSRM publik.
-- Dashboard menghitung statistik dari daftar yang telah dimuat frontend. Endpoint `/api/dashboard/ringkasan` tersedia di backend, tetapi saat ini belum menjadi sumber statistik halaman dashboard.
-- Aplikasi berfokus pada jadwal dan aktivitas kunjungan; bukan sistem pencatatan target uang, nominal kredit, atau pencairan.
-
+- Metrik mingguan memisahkan jadwal berdasarkan tanggal jadwal aktif dari realisasi berdasarkan status Selesai/check-in. Reschedule mengubah tanggal jadwal saat ini; histori tanggal sebelumnya tersedia pada `jadwal_history`.
+- Aplikasi hanya untuk perencanaan, lokasi, check-in, hasil, dokumentasi, dan monitoring kunjungan—bukan Laporan Harian RM, pencatatan target uang, nominal kredit, atau pencairan.

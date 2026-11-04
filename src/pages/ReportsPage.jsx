@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Printer, Search, UsersRound } from 'lucide-react'
+import { Building2, CalendarDays, Camera, CheckCircle2, Download, FileSpreadsheet, Printer, Search, UsersRound } from 'lucide-react'
 import StatusBadge from '../components/StatusBadge'
+import Modal from '../components/Modal'
 import { formatDate, getCustomer, localDateKey } from '../data/workspace'
 
 const monthStart = () => {
@@ -14,6 +15,7 @@ function ReportsPage({ customers, appointments }) {
   const [toDate, setToDate] = useState(localDateKey())
   const [statusFilter, setStatusFilter] = useState('Semua status')
   const [query, setQuery] = useState('')
+  const [viewingPhoto, setViewingPhoto] = useState(null)
   const reportAppointments = useMemo(() => appointments
     .filter((appointment) => appointment.date >= fromDate && appointment.date <= toDate)
     .filter((appointment) => statusFilter === 'Semua status' || appointment.status === statusFilter)
@@ -78,18 +80,18 @@ function ReportsPage({ customers, appointments }) {
             Rekapitulasi aktivitas kunjungan nasabah Bank BRI KCP Iskandar Palembang
           </p>
         </div>
-        <div className="report-actions flex flex-wrap items-center gap-2">
+        <div className="report-actions flex w-full flex-col flex-wrap items-stretch gap-2 sm:w-auto sm:flex-row">
           <button
             type="button"
             onClick={() => window.print()}
-            className="button-secondary"
+            className="button-secondary !min-h-[44px] w-full sm:w-auto"
           >
             <Printer size={14} /> Cetak / PDF
           </button>
           <button
             type="button"
             onClick={exportCsv}
-            className="button-orange"
+            className="button-orange !min-h-[44px] w-full sm:w-auto"
           >
             <FileSpreadsheet size={14} /> Ekspor Excel (CSV)
           </button>
@@ -134,7 +136,7 @@ function ReportsPage({ customers, appointments }) {
               onChange={(event) => setStatusFilter(event.target.value)}
               className="form-control text-xs"
             >
-              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui'].map((status) => (
+              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
@@ -181,8 +183,75 @@ function ReportsPage({ customers, appointments }) {
         />
       </section>
 
-      {/* Table Section */}
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      {/* Mobile Visit Cards */}
+      <div className="space-y-3 md:hidden">
+        {reportAppointments.length > 0 ? reportAppointments.map((appointment) => {
+          const customer = getCustomer(customers, appointment.customerId)
+          return (
+            <article key={appointment.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-slate-900 break-words">{customer?.name || 'Nasabah dihapus'}</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {formatDate(appointment.date, { day: 'numeric', month: 'short', year: 'numeric' })} · {appointment.time}
+                  </p>
+                </div>
+                <StatusBadge status={appointment.status} />
+              </div>
+              <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
+                <p className="font-medium text-slate-800">{appointment.purpose}</p>
+                <p className="break-words text-slate-500">{customer?.address || 'Alamat belum tersedia'}</p>
+                {customer?.phone && (
+                  <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex min-h-[40px] items-center text-[#00529b]">
+                    {customer.phone}
+                  </a>
+                )}
+                <p className="break-words text-slate-600">{appointment.notes || 'Belum ada catatan hasil'}</p>
+                {appointment.checkInAccuracy && (
+                  <p className="text-[11px] font-mono text-slate-500">
+                    GPS: ±{Math.round(appointment.checkInAccuracy)}m
+                    {appointment.checkInDistanceMeters != null ? ` · ${appointment.checkInDistanceMeters}m` : ''}
+                  </p>
+                )}
+              </div>
+              {(appointment.locationPhoto || appointment.documentationPhoto || appointment.evidence) && (
+                <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
+                  {appointment.locationPhoto && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingPhoto({ title: `Foto Lokasi: ${customer?.name}`, src: appointment.locationPhoto })}
+                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-[#00529b]"
+                    >
+                      <Building2 size={13} /> Foto Lokasi
+                    </button>
+                  )}
+                  {(appointment.documentationPhoto || (!appointment.locationPhoto && !appointment.documentationPhoto && appointment.evidence)) && (
+                    <button
+                      type="button"
+                      onClick={() => setViewingPhoto({
+                        title: `Foto Dokumentasi: ${customer?.name}`,
+                        src: appointment.documentationPhoto || appointment.evidence,
+                      })}
+                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700"
+                    >
+                      <Camera size={13} /> Dokumentasi
+                    </button>
+                  )}
+                </div>
+              )}
+            </article>
+          )
+        }) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-xs text-slate-400">
+            <CalendarDays className="mx-auto size-8 text-slate-300" />
+            <p className="mt-2 text-sm font-semibold text-slate-700">Belum ada riwayat</p>
+            <p className="mt-0.5 text-xs text-slate-400">Coba ubah rentang tanggal atau filter status.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop / Tablet Table Section */}
+      <section className="hidden overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs md:block">
         <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/50 px-5 py-3.5">
           <div>
             <h3 className="text-xs font-bold text-slate-900">Riwayat Kunjungan</h3>
@@ -232,18 +301,44 @@ function ReportsPage({ customers, appointments }) {
                         <p className="truncate text-[11px] text-slate-600">{appointment.notes || 'Belum ada catatan'}</p>
                       </td>
                       <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        {appointment.evidence ? (
-                          <a
-                            href={appointment.evidence}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-semibold text-[#00529b] hover:underline"
-                          >
-                            Lihat Foto
-                          </a>
-                        ) : (
-                          <span className="text-slate-300">—</span>
-                        )}
+                        <div className="flex flex-col items-end gap-1">
+                          {appointment.locationPhoto && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingPhoto({ title: `Foto Lokasi: ${customer?.name}`, src: appointment.locationPhoto })}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00529b] hover:underline"
+                            >
+                              <Building2 size={11} /> Foto Lokasi
+                            </button>
+                          )}
+                          {appointment.documentationPhoto && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingPhoto({ title: `Foto Dokumentasi: ${customer?.name}`, src: appointment.documentationPhoto })}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline"
+                            >
+                              <Camera size={11} /> Dokumentasi
+                            </button>
+                          )}
+                          {!appointment.locationPhoto && !appointment.documentationPhoto && appointment.evidence && (
+                            <button
+                              type="button"
+                              onClick={() => setViewingPhoto({ title: `Bukti Foto: ${customer?.name}`, src: appointment.evidence })}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00529b] hover:underline"
+                            >
+                              <Camera size={11} /> Lihat Foto
+                            </button>
+                          )}
+                          {!appointment.locationPhoto && !appointment.documentationPhoto && !appointment.evidence && (
+                            <span className="text-slate-300">—</span>
+                          )}
+                          {appointment.checkInAccuracy && (
+                            <span className="text-[9px] text-slate-400 font-mono">
+                              GPS: ±{Math.round(appointment.checkInAccuracy)}m
+                              {appointment.checkInDistanceMeters !== null && appointment.checkInDistanceMeters !== undefined ? ` · ${appointment.checkInDistanceMeters}m` : ''}
+                            </span>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )
@@ -264,6 +359,33 @@ function ReportsPage({ customers, appointments }) {
           Laporan monitoring aktivitas Relationship Manager Bank BRI KCP Iskandar Palembang
         </div>
       </section>
+
+      {viewingPhoto && (
+        <Modal
+          title={viewingPhoto.title}
+          description="Bukti foto riwayat kunjungan nasabah"
+          onClose={() => setViewingPhoto(null)}
+        >
+          <div className="space-y-3">
+            <div className="max-h-[70vh] overflow-hidden rounded-xl border border-slate-200 bg-slate-900 flex items-center justify-center">
+              <img
+                src={viewingPhoto.src}
+                alt={viewingPhoto.title}
+                className="max-h-[68vh] w-auto max-w-full object-contain"
+              />
+            </div>
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setViewingPhoto(null)}
+                className="button-secondary text-xs"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   )
 }

@@ -1,19 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   Activity,
   ArrowRight,
   CalendarCheck2,
+  CalendarClock,
   CalendarDays,
   Clock3,
-  ExternalLink,
   Eye,
   FileSpreadsheet,
-  Filter,
   RotateCcw,
   Shield,
-  ShieldAlert,
   ShieldCheck,
-  TrendingUp,
   UserCheck,
   UsersRound,
   XCircle,
@@ -21,9 +18,11 @@ import {
 import Modal from '../../components/Modal'
 import StatusBadge from '../../components/StatusBadge'
 import CustomerDistributionMap from '../../components/CustomerDistributionMap'
-import { formatDate } from '../../data/workspace'
+import { formatDate, localDateKey } from '../../data/workspace'
 import { getFollowUpStatusInfo } from '../../services/followUp'
-import { AUDIT_ACTIONS, readLocalAuditLogs } from '../../services/auditLog'
+import { AUDIT_ACTIONS, fetchAuditLogs } from '../../services/auditLog'
+import { isSupabaseConfigured, supabase } from '../../services/supabase'
+import { calculateVisitMetrics, getWeekDateRange } from '../../services/visitMetrics'
 
 const actionLabels = {
   [AUDIT_ACTIONS.LOGIN]: 'Login',
@@ -67,22 +66,72 @@ function AdminDashboardView({
   appointments = [],
   followUps = [],
   onNavigate,
-  userProfile,
 }) {
-  const currentDate = new Date()
+  const currentDate = useMemo(() => new Date(), [])
   const currentYear = currentDate.getFullYear()
   const currentMonth = currentDate.getMonth() + 1 // 1-12
 
   // Filters State
-  const [filterMode, setFilterMode] = useState('monthly') // 'monthly', 'weekly', 'custom'
+  const [filterMode, setFilterMode] = useState('weekly') // 'monthly', 'weekly', 'custom'
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')
   const [selectedRmId, setSelectedRmId] = useState('Semua')
+  const [rmProfiles, setRmProfiles] = useState([])
+  const [rmProfilesError, setRmProfilesError] = useState('')
+  const [recentAuditLogs, setRecentAuditLogs] = useState([])
+  const [auditLogsError, setAuditLogsError] = useState('')
 
   // RM Detail Modal
   const [detailRm, setDetailRm] = useState(null)
+
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase) return undefined
+
+    let isActive = true
+    const loadRmProfiles = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, nama, email, status, assigned_area')
+        .eq('role', 'rm')
+        .order('nama', { ascending: true })
+
+      if (!isActive) return
+      if (error) {
+        console.error('Gagal memuat profil RM untuk dashboard Admin:', error)
+        setRmProfilesError(error.message || 'Daftar RM gagal dimuat.')
+        return
+      }
+
+      setRmProfiles((data || []).filter((profile) => profile.status === 'approved'))
+      setRmProfilesError('')
+    }
+
+    void loadRmProfiles()
+    return () => { isActive = false }
+  }, [])
+
+  useEffect(() => {
+    let isActive = true
+    const loadRecentAuditLogs = async () => {
+      try {
+        const result = await fetchAuditLogs({ page: 1, pageSize: 5 })
+        if (isActive) {
+          setRecentAuditLogs(result.logs)
+          setAuditLogsError('')
+        }
+      } catch (error) {
+        console.error('Gagal memuat aktivitas terbaru untuk dashboard Admin:', error)
+        if (isActive) {
+          setAuditLogsError(error instanceof Error ? error.message : 'Aktivitas terbaru gagal dimuat.')
+        }
+      }
+    }
+
+    void loadRecentAuditLogs()
+    return () => { isActive = false }
+  }, [appointments, followUps])
 
   // Calculate Date Range based on Filter Mode
   const dateRange = useMemo(() => {
@@ -94,13 +143,7 @@ function AdminDashboardView({
     }
 
     if (filterMode === 'weekly') {
-      const now = new Date()
-      const day = now.getDay()
-      const diffToMonday = now.getDate() - day + (day === 0 ? -6 : 1)
-      const monday = new Date(now.setDate(diffToMonday))
-      const sunday = new Date(now.setDate(monday.getDate() + 6))
-      const start = monday.toISOString().slice(0, 10)
-      const end = sunday.toISOString().slice(0, 10)
+      const { start, end } = getWeekDateRange(currentDate)
       return { start, end, label: `Minggu Ini (${formatDate(start)} - ${formatDate(end)})` }
     }
 
@@ -110,56 +153,53 @@ function AdminDashboardView({
       end: customEndDate || '2099-12-31',
       label: customStartDate && customEndDate ? `${formatDate(customStartDate)} - ${formatDate(customEndDate)}` : 'Semua Tanggal',
     }
-  }, [filterMode, selectedMonth, selectedYear, customStartDate, customEndDate])
+  }, [filterMode, selectedMonth, selectedYear, customStartDate, customEndDate, currentDate])
 
-  // Extract distinct list of RMs from appointments and follow-ups
+  // Use approved RM profiles, adding owners of existing activity if a profile is unavailable.
   const rmList = useMemo(() => {
-    const map = new Map()
-
-    // Add seed RMs
-    map.set('rm-01', { id: 'rm-01', nama: 'Ahmad Fauzi', email: 'rm.ahmad@bri.co.id', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
-    map.set('rm-02', { id: 'rm-02', nama: 'Siti Rahmawati', email: 'rm.siti@bri.co.id', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
-    map.set('rm-03', { id: 'rm-03', nama: 'Bambang Irawan', email: 'rm.bambang@bri.co.id', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
+    const map = new Map(rmProfiles.map((profile) => [
+      profile.id,
+      {
+        id: profile.id,
+        nama: profile.nama || 'RM',
+        email: profile.email || '',
+        status: profile.status,
+        wilayah: profile.assigned_area || 'Wilayah belum diatur',
+      },
+    ]))
 
     for (const apt of appointments) {
       if (apt.rmId && !map.has(apt.rmId)) {
-        map.set(apt.rmId, { id: apt.rmId, nama: apt.rmName || `RM #${apt.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
+        map.set(apt.rmId, { id: apt.rmId, nama: apt.rmName || `RM #${apt.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'Wilayah belum diatur' })
       }
     }
     for (const fu of followUps) {
       if (fu.rmId && !map.has(fu.rmId)) {
-        map.set(fu.rmId, { id: fu.rmId, nama: fu.rmName || `RM #${fu.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
+        map.set(fu.rmId, { id: fu.rmId, nama: fu.rmName || `RM #${fu.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'Wilayah belum diatur' })
       }
     }
 
     return Array.from(map.values())
-  }, [appointments, followUps])
-
-  // Filter Appointments by Date Range and RM
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter((apt) => {
-      const inDate = apt.date >= dateRange.start && apt.date <= dateRange.end
-      const inRm = selectedRmId === 'Semua' || (apt.rmId ? apt.rmId === selectedRmId : selectedRmId === 'rm-01')
-      return inDate && inRm
-    })
-  }, [appointments, dateRange, selectedRmId])
+  }, [rmProfiles, appointments, followUps])
 
   // Filter Follow-ups by Date Range and RM
   const filteredFollowUps = useMemo(() => {
     return followUps.filter((fu) => {
       const inDate = fu.date >= dateRange.start && fu.date <= dateRange.end
-      const inRm = selectedRmId === 'Semua' || (fu.rmId ? fu.rmId === selectedRmId : selectedRmId === 'rm-01')
+      const inRm = selectedRmId === 'Semua' || fu.rmId === selectedRmId
       return inDate && inRm
     })
   }, [followUps, dateRange, selectedRmId])
 
-  // Metric Aggregations
-  const totalJadwal = filteredAppointments.length
-  const selesaiCount = filteredAppointments.filter((a) => a.status === 'Selesai').length
-  const rescheduleCount = filteredAppointments.filter((a) => a.status === 'Reschedule').length
-  const tidakDitemuiCount = filteredAppointments.filter((a) => a.status === 'Tidak ditemui').length
-
-  const todayIso = new Date().toISOString().slice(0, 10)
+  const todayIso = localDateKey(currentDate)
+  const selectedRmAppointments = useMemo(
+    () => appointments.filter((appointment) => selectedRmId === 'Semua' || appointment.rmId === selectedRmId),
+    [appointments, selectedRmId]
+  )
+  const visitMetrics = useMemo(
+    () => calculateVisitMetrics(selectedRmAppointments, dateRange),
+    [selectedRmAppointments, dateRange]
+  )
   const overdueFollowUpCount = useMemo(() => {
     return filteredFollowUps.filter((f) => {
       const { isOverdue } = getFollowUpStatusInfo(f, todayIso)
@@ -167,49 +207,39 @@ function AdminDashboardView({
     }).length
   }, [filteredFollowUps, todayIso])
 
-  const completionRate = totalJadwal > 0 ? Math.round((selesaiCount / totalJadwal) * 100) : 0
-
   // RM Performance Rows
   const rmPerformance = useMemo(() => {
     return rmList.map((rm) => {
-      const rmApts = appointments.filter((a) => {
-        const inDate = a.date >= dateRange.start && a.date <= dateRange.end
-        const matchesRm = a.rmId ? a.rmId === rm.id : rm.id === 'rm-01'
-        return inDate && matchesRm
+      const allRmAppointments = appointments.filter((a) => a.rmId === rm.id)
+      const rmApts = allRmAppointments.filter((appointment) => {
+        const scheduledInPeriod = appointment.date >= dateRange.start && appointment.date <= dateRange.end
+        const completedDate = appointment.checkInAt
+          ? localDateKey(new Date(appointment.checkInAt))
+          : appointment.date
+        const completedInPeriod = appointment.status === 'Selesai' &&
+          completedDate >= dateRange.start && completedDate <= dateRange.end
+        return scheduledInPeriod || completedInPeriod
       })
       const rmFollowUps = followUps.filter((f) => {
         const inDate = f.date >= dateRange.start && f.date <= dateRange.end
-        const matchesRm = f.rmId ? f.rmId === rm.id : rm.id === 'rm-01'
-        return inDate && matchesRm
+        return inDate && f.rmId === rm.id
       })
 
-      const total = rmApts.length
-      const selesai = rmApts.filter((a) => a.status === 'Selesai').length
-      const reschedule = rmApts.filter((a) => a.status === 'Reschedule').length
-      const unmet = rmApts.filter((a) => a.status === 'Tidak ditemui').length
+      const metrics = calculateVisitMetrics(allRmAppointments, dateRange)
       const overdue = rmFollowUps.filter((f) => getFollowUpStatusInfo(f, todayIso).isOverdue).length
-      const rate = total > 0 ? Math.round((selesai / total) * 100) : 0
 
       return {
         ...rm,
-        total,
-        selesai,
-        reschedule,
-        unmet,
+        ...metrics,
         overdue,
-        rate,
         appointments: rmApts,
         followUps: rmFollowUps,
       }
     })
   }, [rmList, appointments, followUps, dateRange, todayIso])
 
-  const recentAuditLogs = useMemo(() => {
-    return readLocalAuditLogs().slice(0, 5)
-  }, [appointments, followUps])
-
   const handleResetFilters = () => {
-    setFilterMode('monthly')
+    setFilterMode('weekly')
     setSelectedMonth(currentMonth)
     setSelectedYear(currentYear)
     setCustomStartDate('')
@@ -266,7 +296,7 @@ function AdminDashboardView({
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           {/* Mode Selector */}
-          <div className="flex items-center gap-1 rounded-lg bg-slate-100 p-1">
+          <div className="flex w-full items-center justify-between gap-1 rounded-lg bg-slate-100 p-1 sm:w-fit sm:justify-start">
             <button
               type="button"
               onClick={() => setFilterMode('monthly')}
@@ -322,12 +352,12 @@ function AdminDashboardView({
             )}
 
             {filterMode === 'custom' && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
                 <input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="form-control text-xs py-1"
+                  className="form-control w-full text-xs py-1 sm:w-auto"
                 />
                 <span className="text-xs text-slate-400">-</span>
                 <input
@@ -361,7 +391,7 @@ function AdminDashboardView({
           </div>
         </div>
 
-        <div className="border-t border-slate-100 pt-2 text-[11px] text-slate-500 flex items-center justify-between">
+        <div className="flex flex-col justify-between gap-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500 sm:flex-row sm:items-center">
           <span>
             Periode aktif: <strong className="text-slate-800">{dateRange.label}</strong>
             {selectedRmId !== 'Semua' && ` · Filter RM: ${rmList.find((r) => r.id === selectedRmId)?.nama || selectedRmId}`}
@@ -370,8 +400,14 @@ function AdminDashboardView({
         </div>
       </div>
 
-      {/* 6 Essential KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {rmProfilesError && (
+        <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
+          Profil RM gagal dimuat dari Supabase: {rmProfilesError}. Tabel monitoring hanya dapat menampilkan RM yang ditemukan pada jadwal atau follow-up.
+        </p>
+      )}
+
+      {/* Weekly plan and actual visit counts are reported separately. */}
+      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 min-[1400px]:grid-cols-8">
         {/* Total RM */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between">
@@ -382,24 +418,34 @@ function AdminDashboardView({
           <p className="mt-1 text-[11px] text-emerald-600 font-semibold">{rmList.filter((r) => r.status === 'approved').length} RM Aktif</p>
         </div>
 
-        {/* Total Jadwal */}
+        {/* Planned appointments */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Total Jadwal</span>
+            <span className="text-xs font-medium text-slate-500">Jadwal Direncanakan</span>
             <CalendarDays size={16} className="text-[#00529b]" />
           </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{totalJadwal}</p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{visitMetrics.plannedCount}</p>
           <p className="mt-1 text-[11px] text-slate-500">Periode ini</p>
         </div>
 
-        {/* Selesai */}
+        {/* Actual visits */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Kunjungan Selesai</span>
+            <span className="text-xs font-medium text-slate-500">Realisasi (Selesai)</span>
             <CalendarCheck2 size={16} className="text-emerald-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-emerald-700">{selesaiCount}</p>
-          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">{completionRate}% Selesai</p>
+          <p className="mt-2 text-2xl font-black text-emerald-700">{visitMetrics.completedCount}</p>
+          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Check-in selesai pada periode</p>
+        </div>
+
+        {/* Visits not yet completed */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Belum Terlaksana</span>
+            <CalendarClock size={16} className="text-amber-600" />
+          </div>
+          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.pendingCount}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Status Terjadwal</p>
         </div>
 
         {/* Reschedule */}
@@ -408,7 +454,7 @@ function AdminDashboardView({
             <span className="text-xs font-medium text-slate-500">Reschedule</span>
             <RotateCcw size={16} className="text-amber-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{rescheduleCount}</p>
+          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.rescheduledCount}</p>
           <p className="mt-1 text-[11px] text-amber-600">Jadwal ulang</p>
         </div>
 
@@ -418,8 +464,18 @@ function AdminDashboardView({
             <span className="text-xs font-medium text-slate-500">Tidak Ditemui</span>
             <XCircle size={16} className="text-rose-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-rose-700">{tidakDitemuiCount}</p>
+          <p className="mt-2 text-2xl font-black text-rose-700">{visitMetrics.notMetCount}</p>
           <p className="mt-1 text-[11px] text-rose-600">Perlu kunjungan ulang</p>
+        </div>
+
+        {/* Historical cancellations remain visible as their own outcome. */}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-slate-500">Batal</span>
+            <XCircle size={16} className="text-slate-500" />
+          </div>
+          <p className="mt-2 text-2xl font-black text-slate-700">{visitMetrics.cancelledCount}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Tidak dihitung sebagai jadwal aktif</p>
         </div>
 
         {/* Follow-up Terlambat */}
@@ -448,7 +504,7 @@ function AdminDashboardView({
           <div>
             <h3 className="text-sm font-bold text-slate-900">Tabel Kinerja & Capaian Kunjungan Relationship Manager</h3>
             <p className="mt-0.5 text-xs text-slate-500">
-              Evaluasi kepatuhan jadwal, persentase kunjungan berhasil, dan beban tindak lanjut nasabah.
+              Jadwal yang direncanakan dan realisasi check-in dihitung terpisah untuk setiap RM.
             </p>
           </div>
           <span className="text-xs font-medium text-slate-500">Periode: {dateRange.label}</span>
@@ -460,12 +516,13 @@ function AdminDashboardView({
               <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-50/50">
                 <th className="px-5 py-3">Nama Relationship Manager</th>
                 <th className="px-4 py-3">Wilayah Tugas</th>
-                <th className="px-4 py-3 text-center">Total Jadwal</th>
-                <th className="px-4 py-3 text-center">Selesai (GPS)</th>
+                <th className="px-4 py-3 text-center">Jadwal</th>
+                <th className="px-4 py-3 text-center">Realisasi</th>
+                <th className="px-4 py-3 text-center">Belum Terlaksana</th>
                 <th className="px-4 py-3 text-center">Reschedule</th>
                 <th className="px-4 py-3 text-center">Tidak Ditemui</th>
+                <th className="px-4 py-3 text-center">Batal</th>
                 <th className="px-4 py-3 text-center">FU Terlambat</th>
-                <th className="px-4 py-3">Efektivitas Kunjungan</th>
                 <th className="px-5 py-3 text-right">Aksi</th>
               </tr>
             </thead>
@@ -487,16 +544,22 @@ function AdminDashboardView({
                     {row.wilayah}
                   </td>
                   <td className="px-4 py-3.5 text-center font-bold text-slate-800">
-                    {row.total}
+                    {row.plannedCount}
                   </td>
                   <td className="px-4 py-3.5 text-center font-bold text-emerald-700 bg-emerald-50/30">
-                    {row.selesai}
+                    {row.completedCount}
                   </td>
                   <td className="px-4 py-3.5 text-center font-semibold text-amber-700">
-                    {row.reschedule}
+                    {row.pendingCount}
+                  </td>
+                  <td className="px-4 py-3.5 text-center font-semibold text-amber-700">
+                    {row.rescheduledCount}
                   </td>
                   <td className="px-4 py-3.5 text-center font-semibold text-rose-700">
-                    {row.unmet}
+                    {row.notMetCount}
+                  </td>
+                  <td className="px-4 py-3.5 text-center font-semibold text-slate-600">
+                    {row.cancelledCount}
                   </td>
                   <td className="px-4 py-3.5 text-center">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
@@ -504,19 +567,6 @@ function AdminDashboardView({
                     }`}>
                       {row.overdue}
                     </span>
-                  </td>
-                  <td className="px-4 py-3.5 min-w-[130px]">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-[#00529b]"
-                          style={{ width: `${Math.min(100, row.rate)}%` }}
-                        />
-                      </div>
-                      <span className="text-xs font-bold text-slate-800 shrink-0 w-8 text-right">
-                        {row.rate}%
-                      </span>
-                    </div>
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <button
@@ -558,6 +608,12 @@ function AdminDashboardView({
           </button>
         </div>
 
+        {auditLogsError && (
+          <p className="border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-800" role="status">
+            Aktivitas terbaru gagal dimuat: {auditLogsError}
+          </p>
+        )}
+
         <div className="divide-y divide-slate-100">
           {recentAuditLogs.length > 0 ? (
             recentAuditLogs.map((log) => {
@@ -569,24 +625,30 @@ function AdminDashboardView({
               })
               const formattedDate = formatDate(log.createdAt.slice(0, 10))
 
-              let detailSummary = ''
-              if (log.action === AUDIT_ACTIONS.RESCHEDULE_VISIT) {
-                detailSummary = `Reschedule jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ke ${log.details?.newDate ? formatDate(log.details.newDate) : ''} pukul ${log.details?.newTime || ''} ${log.details?.notes ? `— "${log.details.notes}"` : ''}`
-              } else if (log.action === AUDIT_ACTIONS.DELETE_JADWAL) {
-                detailSummary = `Menghapus jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ${log.details?.reason ? `(${log.details.reason})` : ''}`
-              } else if (log.action === AUDIT_ACTIONS.CHECK_IN_VISIT) {
-                detailSummary = `Check-in GPS berhasil divalidasi (jarak ${log.details?.distanceMeters ?? '±0'} meter dari titik nasabah)`
-              } else if (log.action === AUDIT_ACTIONS.CREATE_JADWAL) {
-                detailSummary = `Membuat jadwal kunjungan baru pada ${log.details?.date ? formatDate(log.details.date) : ''} pukul ${log.details?.time || ''}`
-              } else if (log.action === AUDIT_ACTIONS.COMPLETE_FOLLOW_UP) {
-                detailSummary = `Menyelesaikan follow-up nasabah ${log.details?.resultNotes ? `— "${log.details.resultNotes}"` : ''}`
-              } else if (log.action === AUDIT_ACTIONS.CANCEL_FOLLOW_UP) {
-                detailSummary = `Membatalkan tindak lanjut nasabah`
-              } else if (log.action === AUDIT_ACTIONS.DELETE_FOLLOW_UP) {
-                detailSummary = `Menghapus item follow-up nasabah`
-              } else {
-                detailSummary = log.details?.customerName || log.details?.nama || log.entityType
-              }
+              const detailSummary = (() => {
+                if (log.action === AUDIT_ACTIONS.RESCHEDULE_VISIT) {
+                  return `Reschedule jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ke ${log.details?.newDate ? formatDate(log.details.newDate) : ''} pukul ${log.details?.newTime || ''} ${log.details?.notes ? `— "${log.details.notes}"` : ''}`
+                }
+                if (log.action === AUDIT_ACTIONS.DELETE_JADWAL) {
+                  return `Menghapus jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ${log.details?.reason ? `(${log.details.reason})` : ''}`
+                }
+                if (log.action === AUDIT_ACTIONS.CHECK_IN_VISIT) {
+                  return `Check-in GPS berhasil divalidasi (jarak ${log.details?.distanceMeters ?? '±0'} meter dari titik nasabah)`
+                }
+                if (log.action === AUDIT_ACTIONS.CREATE_JADWAL) {
+                  return `Membuat jadwal kunjungan baru pada ${log.details?.date ? formatDate(log.details.date) : ''} pukul ${log.details?.time || ''}`
+                }
+                if (log.action === AUDIT_ACTIONS.COMPLETE_FOLLOW_UP) {
+                  return `Menyelesaikan follow-up nasabah ${log.details?.resultNotes ? `— "${log.details.resultNotes}"` : ''}`
+                }
+                if (log.action === AUDIT_ACTIONS.CANCEL_FOLLOW_UP) {
+                  return 'Membatalkan tindak lanjut nasabah'
+                }
+                if (log.action === AUDIT_ACTIONS.DELETE_FOLLOW_UP) {
+                  return 'Menghapus item follow-up nasabah'
+                }
+                return log.details?.customerName || log.details?.nama || log.entityType
+              })()
 
               return (
                 <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50/70 transition">
@@ -634,18 +696,30 @@ function AdminDashboardView({
         >
           <div className="space-y-4">
             {/* RM Summary Stats */}
-            <div className="grid grid-cols-4 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-xs">
+            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-xs sm:grid-cols-6">
               <div>
-                <p className="text-[10px] text-slate-400">Total Jadwal</p>
-                <p className="text-base font-bold text-slate-900 mt-0.5">{detailRm.total}</p>
+                <p className="text-[10px] text-slate-400">Jadwal</p>
+                <p className="text-base font-bold text-slate-900 mt-0.5">{detailRm.plannedCount}</p>
               </div>
               <div>
-                <p className="text-[10px] text-emerald-600">Selesai (GPS)</p>
-                <p className="text-base font-bold text-emerald-700 mt-0.5">{detailRm.selesai}</p>
+                <p className="text-[10px] text-emerald-600">Realisasi</p>
+                <p className="text-base font-bold text-emerald-700 mt-0.5">{detailRm.completedCount}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-amber-600">Belum Terlaksana</p>
+                <p className="text-base font-bold text-amber-700 mt-0.5">{detailRm.pendingCount}</p>
               </div>
               <div>
                 <p className="text-[10px] text-amber-600">Reschedule</p>
-                <p className="text-base font-bold text-amber-700 mt-0.5">{detailRm.reschedule}</p>
+                <p className="text-base font-bold text-amber-700 mt-0.5">{detailRm.rescheduledCount}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-rose-600">Tidak Ditemui</p>
+                <p className="text-base font-bold text-rose-700 mt-0.5">{detailRm.notMetCount}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500">Batal</p>
+                <p className="text-base font-bold text-slate-700 mt-0.5">{detailRm.cancelledCount}</p>
               </div>
               <div>
                 <p className="text-[10px] text-rose-600">FU Terlambat</p>
@@ -661,12 +735,13 @@ function AdminDashboardView({
                   detailRm.appointments.map((apt) => {
                     const cust = customers.find((c) => String(c.id) === String(apt.customerId))
                     return (
-                      <div key={apt.id} className="rounded-lg border border-slate-200 p-2.5 text-xs flex items-center justify-between bg-white">
-                        <div>
+                      <div key={apt.id} className="flex flex-col justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs sm:flex-row sm:items-center">
+                        <div className="min-w-0">
                           <p className="font-bold text-slate-900">{cust?.name || `Nasabah #${apt.customerId}`}</p>
                           <p className="text-[11px] text-slate-500 font-mono">{formatDate(apt.date)} · {apt.time} · {apt.purpose}</p>
+                          {apt.notes && <p className="mt-1 max-w-xl text-[11px] text-slate-600">{apt.notes}</p>}
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <StatusBadge status={apt.status} />
                           {apt.checkInDistanceMeters !== undefined && apt.checkInDistanceMeters !== null && (
                             <span className="text-[10px] text-emerald-600 font-semibold font-mono">

@@ -118,34 +118,31 @@ export function calculateFollowUpMetrics(items = [], today = localDateKey()) {
 // ============================================================================
 
 export async function fetchFollowUps(filterUser = null) {
-  let list = []
   if (isSupabaseConfigured() && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('follow_ups')
-        .select(`
+    const { data, error } = await supabase
+      .from('follow_ups')
+      .select(`
           *,
           nasabahs:nasabah_id (nama, no_hp, alamat),
           profiles:rm_id (nama)
         `)
-        .order('tanggal_follow_up', { ascending: true })
-        .order('waktu_follow_up', { ascending: true })
+      .order('tanggal_follow_up', { ascending: true })
+      .order('waktu_follow_up', { ascending: true })
 
-      if (error) {
-        console.warn('Gagal membaca follow_ups dari Supabase, beralih ke storage lokal:', error.message)
-      } else if (data) {
-        list = data.map(mapFollowUpFromDb)
-      }
-    } catch (err) {
-      console.warn('Supabase fetch follow_ups exception, fallback to local storage:', err)
+    if (error) {
+      console.error('Gagal membaca follow-up dari Supabase:', error)
+      throw new Error(error.message || 'Gagal memuat follow-up dari database.')
     }
+
+    const list = (data || []).map(mapFollowUpFromDb)
+    if (filterUser?.role === 'rm' && filterUser.id) {
+      return list.filter((followUp) => followUp.rmId === filterUser.id)
+    }
+    return list
   }
 
-  if (!list.length) {
-    const { workspace } = readWorkspace()
-    list = workspace.followUps || []
-  }
-
+  const { workspace } = readWorkspace()
+  const list = workspace.followUps || []
   if (filterUser && filterUser.role === 'rm' && filterUser.id) {
     return list.filter((f) => !f.rmId || f.rmId === filterUser.id)
   }
@@ -156,42 +153,35 @@ export async function saveFollowUp(followUpData, currentUser = null) {
   const isExisting = Boolean(followUpData.id) && /^\d+$/.test(String(followUpData.id))
 
   if (isSupabaseConfigured() && supabase) {
-    try {
-      const authUser = (await supabase.auth.getUser()).data?.user
-      const targetRmId = followUpData.rmId || authUser?.id
+    const authUser = (await supabase.auth.getUser()).data?.user
+    const targetRmId = followUpData.rmId || authUser?.id
 
-      const payload = {
-        nasabah_id: Number(followUpData.customerId),
-        jadwal_kunjungan_id: followUpData.appointmentId ? Number(followUpData.appointmentId) : null,
-        tanggal_follow_up: followUpData.date,
-        waktu_follow_up: followUpData.time ? (followUpData.time.length === 5 ? `${followUpData.time}:00` : followUpData.time) : '09:00:00',
-        jenis_tindak_lanjut: followUpData.type,
-        catatan: followUpData.notes.trim(),
-        prioritas: followUpData.priority || 'Normal',
-        status: followUpData.status || 'Belum Dilakukan',
-        hasil_tindak_lanjut: followUpData.resultNotes ? followUpData.resultNotes.trim() : null,
-        completed_at: followUpData.completedAt || null,
-        updated_at: new Date().toISOString(),
-      }
+    const payload = {
+      nasabah_id: Number(followUpData.customerId),
+      jadwal_kunjungan_id: followUpData.appointmentId ? Number(followUpData.appointmentId) : null,
+      tanggal_follow_up: followUpData.date,
+      waktu_follow_up: followUpData.time ? (followUpData.time.length === 5 ? `${followUpData.time}:00` : followUpData.time) : '09:00:00',
+      jenis_tindak_lanjut: followUpData.type,
+      catatan: followUpData.notes.trim(),
+      prioritas: followUpData.priority || 'Normal',
+      status: followUpData.status || 'Belum Dilakukan',
+      hasil_tindak_lanjut: followUpData.resultNotes ? followUpData.resultNotes.trim() : null,
+      completed_at: followUpData.completedAt || null,
+      updated_at: new Date().toISOString(),
+    }
 
-      if (isExisting) {
-        const { data, error } = await supabase
-          .from('follow_ups')
-          .update(payload)
-          .eq('id', followUpData.id)
-          .select(`
+    const result = isExisting
+      ? await supabase
+        .from('follow_ups')
+        .update(payload)
+        .eq('id', followUpData.id)
+        .select(`
             *,
             nasabahs:nasabah_id (nama, no_hp, alamat),
             profiles:rm_id (nama)
           `)
-          .single()
-
-        if (error) throw error
-        return mapFollowUpFromDb(data)
-      }
-
-      // Insert new
-      const { data, error } = await supabase
+        .single()
+      : await supabase
         .from('follow_ups')
         .insert([{
           ...payload,
@@ -204,11 +194,11 @@ export async function saveFollowUp(followUpData, currentUser = null) {
         `)
         .single()
 
-      if (error) throw error
-      return mapFollowUpFromDb(data)
-    } catch (err) {
-      console.warn('Gagal menyimpan follow_up ke Supabase, simpan ke lokal storage:', err)
+    if (result.error) {
+      console.error('Gagal menyimpan follow-up ke Supabase:', result.error)
+      throw new Error(result.error.message || 'Gagal menyimpan follow-up ke database.')
     }
+    return mapFollowUpFromDb(result.data)
   }
 
   // Local storage fallback
@@ -259,32 +249,30 @@ export async function completeFollowUp(id, resultNotes = '', currentUser = null)
   const completedAt = new Date().toISOString()
   let completedItem = null
 
-  if (isSupabaseConfigured() && supabase && /^\d+$/.test(String(id))) {
-    try {
-      const { data, error } = await supabase
-        .from('follow_ups')
-        .update({
-          status: 'Selesai',
-          hasil_tindak_lanjut: resultNotes.trim(),
-          completed_at: completedAt,
-          updated_at: completedAt,
-        })
-        .eq('id', id)
-        .select(`
+  if (isSupabaseConfigured() && supabase) {
+    if (!/^\d+$/.test(String(id))) throw new Error('ID follow-up tidak valid untuk database.')
+    const { data, error } = await supabase
+      .from('follow_ups')
+      .update({
+        status: 'Selesai',
+        hasil_tindak_lanjut: resultNotes.trim(),
+        completed_at: completedAt,
+        updated_at: completedAt,
+      })
+      .eq('id', id)
+      .select(`
           *,
           nasabahs:nasabah_id (nama, no_hp, alamat),
           profiles:rm_id (nama)
         `)
-        .single()
+      .single()
 
-      if (error) throw error
-      completedItem = mapFollowUpFromDb(data)
-    } catch (err) {
-      console.warn('Gagal complete follow_up di Supabase:', err)
+    if (error) {
+      console.error('Gagal menyelesaikan follow-up di Supabase:', error)
+      throw new Error(error.message || 'Gagal menyelesaikan follow-up di database.')
     }
-  }
-
-  if (!completedItem) {
+    completedItem = mapFollowUpFromDb(data)
+  } else {
     const { workspace } = readWorkspace()
     const nextFollowUps = (workspace.followUps || []).map((f) => {
       if (String(f.id) === String(id)) {
@@ -317,30 +305,28 @@ export async function cancelFollowUp(id, currentUser = null) {
   const updatedAt = new Date().toISOString()
   let canceledItem = null
 
-  if (isSupabaseConfigured() && supabase && /^\d+$/.test(String(id))) {
-    try {
-      const { data, error } = await supabase
-        .from('follow_ups')
-        .update({
-          status: 'Dibatalkan',
-          updated_at: updatedAt,
-        })
-        .eq('id', id)
-        .select(`
+  if (isSupabaseConfigured() && supabase) {
+    if (!/^\d+$/.test(String(id))) throw new Error('ID follow-up tidak valid untuk database.')
+    const { data, error } = await supabase
+      .from('follow_ups')
+      .update({
+        status: 'Dibatalkan',
+        updated_at: updatedAt,
+      })
+      .eq('id', id)
+      .select(`
           *,
           nasabahs:nasabah_id (nama, no_hp, alamat),
           profiles:rm_id (nama)
         `)
-        .single()
+      .single()
 
-      if (error) throw error
-      canceledItem = mapFollowUpFromDb(data)
-    } catch (err) {
-      console.warn('Gagal cancel follow_up di Supabase:', err)
+    if (error) {
+      console.error('Gagal membatalkan follow-up di Supabase:', error)
+      throw new Error(error.message || 'Gagal membatalkan follow-up di database.')
     }
-  }
-
-  if (!canceledItem) {
+    canceledItem = mapFollowUpFromDb(data)
+  } else {
     const { workspace } = readWorkspace()
     const nextFollowUps = (workspace.followUps || []).map((f) => {
       if (String(f.id) === String(id)) {
@@ -367,22 +353,22 @@ export async function cancelFollowUp(id, currentUser = null) {
 }
 
 export async function deleteFollowUp(id, currentUser = null) {
-  if (isSupabaseConfigured() && supabase && /^\d+$/.test(String(id))) {
-    try {
-      const { error } = await supabase
-        .from('follow_ups')
-        .delete()
-        .eq('id', id)
+  if (isSupabaseConfigured() && supabase) {
+    if (!/^\d+$/.test(String(id))) throw new Error('ID follow-up tidak valid untuk database.')
+    const { error } = await supabase
+      .from('follow_ups')
+      .delete()
+      .eq('id', id)
 
-      if (error) throw error
-    } catch (err) {
-      console.warn('Gagal delete follow_up di Supabase:', err)
+    if (error) {
+      console.error('Gagal menghapus follow-up di Supabase:', error)
+      throw new Error(error.message || 'Gagal menghapus follow-up dari database.')
     }
+  } else {
+    const { workspace } = readWorkspace()
+    const nextFollowUps = (workspace.followUps || []).filter((f) => String(f.id) !== String(id))
+    writeWorkspace({ ...workspace, followUps: nextFollowUps })
   }
-
-  const { workspace } = readWorkspace()
-  const nextFollowUps = (workspace.followUps || []).filter((f) => String(f.id) !== String(id))
-  writeWorkspace({ ...workspace, followUps: nextFollowUps })
 
   void recordAuditEvent({
     action: AUDIT_ACTIONS.DELETE_FOLLOW_UP,

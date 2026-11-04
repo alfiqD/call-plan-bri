@@ -20,9 +20,10 @@ const baseNavigation = [
   { id: 'reports', label: 'Laporan Kunjungan', icon: ClipboardList },
 ]
 
-function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0 }) {
+function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogoutModal }) {
   const { role, profile, user, signOut } = useAuth()
   const isAdmin = role === 'admin'
+  const handleLogout = onOpenLogoutModal || signOut
 
   const navigation = [
     ...baseNavigation,
@@ -66,7 +67,7 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0 }) {
               <button
                 key={id}
                 onClick={() => onNavigate(id)}
-                className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
+                className={`group flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
                   isActive
                     ? 'bg-[#eaf3fb] text-[#00529b] font-semibold'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
@@ -98,25 +99,28 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0 }) {
 
       {/* User Info & Logout Section */}
       <div className="border-t border-slate-100 bg-slate-50/60 p-3">
-        <div className="flex items-center gap-2.5 rounded-lg bg-white p-2.5 border border-slate-200/80 shadow-xs">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-xs font-bold text-[#00529b]">
-            {displayName.slice(0, 2).toUpperCase()}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-semibold text-slate-800">{displayName}</p>
-            <div className="flex items-center gap-1 text-[10px] text-slate-500">
-              {isAdmin ? <Shield size={10} className="text-amber-600" /> : <User size={10} className="text-blue-600" />}
-              <span className="truncate">{roleLabel}</span>
+        <div className="rounded-xl bg-white p-2.5 border border-slate-200/80 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-xs font-bold text-[#00529b]">
+              {displayName.slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-800">{displayName}</p>
+              <div className="flex items-center gap-1 text-[10px] text-slate-500">
+                {isAdmin ? <Shield size={10} className="text-amber-600" /> : <User size={10} className="text-blue-600" />}
+                <span className="truncate">{roleLabel}</span>
+              </div>
             </div>
           </div>
           <button
             type="button"
-            onClick={signOut}
+            onClick={handleLogout}
             title="Keluar dari Akun"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-200/80 bg-rose-50/70 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100/90 hover:text-rose-800 active:scale-[0.99] transition shadow-2xs"
             aria-label="Keluar dari akun"
           >
-            <LogOut size={16} />
+            <LogOut size={13} />
+            <span>Keluar dari Akun</span>
           </button>
         </div>
       </div>

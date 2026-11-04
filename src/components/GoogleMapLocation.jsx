@@ -121,7 +121,7 @@ function GoogleMapLocation({ position, onPick, onMapError, className = '', heigh
   }
 
   return (
-    <div className={`relative w-full overflow-hidden rounded-xl bg-slate-100 ${className}`} style={{ height }}>
+    <div className={`relative w-full overflow-hidden rounded-xl bg-slate-100 ${className}`} style={{ height: `clamp(220px, 45vh, ${height})` }}>
       {!isReady && <div className="absolute inset-0 z-10 flex items-center justify-center text-xs text-slate-500"><LoaderCircle className="mr-2 size-4 animate-spin" />Memuat Google Maps...</div>}
       <div ref={containerRef} className="h-full w-full" />
     </div>

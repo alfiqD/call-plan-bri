@@ -242,7 +242,7 @@ function FollowUpFormModal({
           </div>
         )}
 
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
           <button
             type="button"
             onClick={onClose}

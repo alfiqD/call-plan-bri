@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
-import { CalendarClock, History, Lock, MoreHorizontal, Pencil, Phone, Plus, Search, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
+import { CalendarClock, History, Lock, MapPin, Pencil, Phone, Plus, Search, ShieldCheck, Trash2, UsersRound } from 'lucide-react'
 import CustomerForm from '../components/CustomerForm'
 import StatusBadge from '../components/StatusBadge'
 import CustomerFollowUpHistoryModal from '../components/CustomerFollowUpHistoryModal'
@@ -18,6 +18,7 @@ function CustomersPage({
   onNotify,
   onNavigate,
   isAdmin,
+  currentUserId,
 }) {
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState('Semua')
@@ -28,6 +29,7 @@ function CustomersPage({
   const [followUpCustomer, setFollowUpCustomer] = useState(null)
   const [timelineCustomer, setTimelineCustomer] = useState(null)
   const [actionError, setActionError] = useState('')
+  const canManageCustomer = (customer) => isAdmin || customer.createdByRmId === currentUserId
   const filteredCustomers = useMemo(() => customers.filter((customer) => {
     const matchesType = filter === 'Semua' || customer.type === filter
     const matchesQuery = `${customer.name} ${customer.phone} ${customer.noRekening || ''} ${customer.address}`.toLowerCase().includes(query.toLowerCase())
@@ -64,7 +66,7 @@ function CustomersPage({
       {/* Top Header Bar */}
       <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Database Nasabah</h2>
             <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
               {customers.length} Terdaftar
@@ -75,7 +77,7 @@ function CustomersPage({
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                <Lock size={10} className="text-slate-400" /> RM (Read & Edit)
+                <Lock size={10} className="text-slate-400" /> RM (Baca data cabang; edit data sendiri)
               </span>
             )}
           </div>
@@ -87,7 +89,7 @@ function CustomersPage({
         <button
           type="button"
           onClick={() => setIsCreating(true)}
-          className="button-orange w-fit self-start sm:self-auto"
+          className="button-orange !min-h-[44px] w-full self-start sm:w-fit sm:self-auto"
         >
           <Plus size={15} /> Tambah Nasabah
         </button>
@@ -196,14 +198,20 @@ function CustomersPage({
                         >
                           <CalendarClock size={15} />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditingCustomer(customer)}
-                          title="Ubah Data Nasabah"
-                          className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-[#00529b] transition"
-                        >
-                          <Pencil size={15} />
-                        </button>
+                        {canManageCustomer(customer) ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingCustomer(customer)}
+                            title="Ubah Data Nasabah"
+                            className="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-[#00529b] transition"
+                          >
+                            <Pencil size={15} />
+                          </button>
+                        ) : (
+                          <span title="RM hanya dapat mengubah nasabah yang dibuatnya" className="p-1.5 text-slate-200 cursor-not-allowed">
+                            <Lock size={15} />
+                          </span>
+                        )}
                         {isAdmin ? (
                           <button
                             type="button"
@@ -279,28 +287,41 @@ function CustomersPage({
                 </p>
               )}
 
-              <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
+              <div className="mt-3 flex flex-wrap items-center justify-start gap-2 border-t border-slate-100 pt-2.5">
+                <button
+                  type="button"
+                  onClick={() => setMapCustomer(customer)}
+                  className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-[#00529b]"
+                >
+                  <MapPin size={13} /> Lokasi
+                </button>
                 <button
                   type="button"
                   onClick={() => setTimelineCustomer(customer)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                  className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
                 >
                   <History size={13} /> Timeline
                 </button>
                 <button
                   type="button"
                   onClick={() => setHistoryCustomer(customer)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-amber-50"
+                  className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-amber-50"
                 >
                   <CalendarClock size={13} /> Follow-up
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingCustomer(customer)}
-                  className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                >
-                  <Pencil size={13} /> Edit
-                </button>
+                {canManageCustomer(customer) ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingCustomer(customer)}
+                    className="inline-flex min-h-[40px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                  >
+                    <Pencil size={13} /> Edit
+                  </button>
+                ) : (
+                  <span title="RM hanya dapat mengubah nasabah yang dibuatnya" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs text-slate-400">
+                    <Lock size={13} /> Baca saja
+                  </span>
+                )}
                 {isAdmin && (
                   <button
                     type="button"
@@ -338,7 +359,7 @@ function CustomersPage({
           followUps={followUps}
           onClose={() => setTimelineCustomer(null)}
           onNewFollowUp={(cust) => setFollowUpCustomer(cust)}
-          onNewAppointment={(cust) => onNavigate?.('schedule')}
+          onNewAppointment={() => onNavigate?.('schedule')}
         />
       )}
       {followUpCustomer && (

@@ -30,6 +30,13 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
         status: appointment?.status || 'Terjadwal',
         notes: appointment?.notes || '',
         evidence: appointment?.evidence || '',
+        locationPhoto: appointment?.locationPhoto || '',
+        documentationPhoto: appointment?.documentationPhoto || '',
+        checkInAt: appointment?.checkInAt || null,
+        checkInLatitude: appointment?.checkInLatitude || null,
+        checkInLongitude: appointment?.checkInLongitude || null,
+        checkInAccuracy: appointment?.checkInAccuracy || null,
+        checkInDistanceMeters: appointment?.checkInDistanceMeters || null,
       })
     } catch (submitError) {
       setError(submitError instanceof Error ? submitError.message : 'Jadwal gagal disimpan.')
@@ -71,9 +78,9 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
           </select>
         </label>
         <p className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#00529b]">Jadwal dan lokasi hanya untuk perencanaan kunjungan, tidak mencatat target uang atau nominal kredit.</p>
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
-          <button type="button" onClick={onClose} className="button-secondary">Batal</button>
-          <button type="submit" className="button-orange">{appointment ? 'Simpan perubahan' : 'Simpan jadwal'}</button>
+        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+          <button type="button" onClick={onClose} className="button-secondary !min-h-[44px] w-full sm:w-auto">Batal</button>
+          <button type="submit" className="button-orange !min-h-[44px] w-full sm:w-auto">{appointment ? 'Simpan perubahan' : 'Simpan jadwal'}</button>
         </div>
       </form>
     </Modal>

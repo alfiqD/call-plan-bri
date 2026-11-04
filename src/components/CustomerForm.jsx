@@ -327,7 +327,7 @@ function CustomerForm({ customer, onClose, onSubmit }) {
           </label>
         </div>
         {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
           <button type="button" onClick={onClose} className="button-secondary">Batal</button>
           <button type="submit" className="button-orange">{customer ? 'Simpan perubahan' : 'Tambah nasabah'}</button>
         </div>

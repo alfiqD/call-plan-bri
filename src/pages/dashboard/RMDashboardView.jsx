@@ -1,31 +1,23 @@
 import { useState, useMemo } from 'react'
 import {
-  ArrowRight,
   CalendarCheck2,
   CalendarClock,
   CalendarDays,
-  Clock,
   Clock3,
+  ChevronLeft,
+  ChevronRight,
   MapPin,
   Plus,
   RotateCcw,
   ShieldCheck,
-  Target,
   UserCheck,
-  XCircle,
 } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge'
 import VisitUpdateModal from '../../components/VisitUpdateModal'
 import CustomerDistributionMap from '../../components/CustomerDistributionMap'
-import { formatDate, getAppointmentDateTime, getCustomer, localDateKey } from '../../data/workspace'
+import { formatDate, getCustomer, localDateKey } from '../../data/workspace'
 import { calculateFollowUpMetrics, getFollowUpStatusInfo } from '../../services/followUp'
-
-const MONTH_NAMES = [
-  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
-]
-
-const MONTHLY_TARGET_VISITS = 25 // Standar target kunjungan bulanan per RM di BRI
+import { calculateVisitMetrics, getWeekDateRange } from '../../services/visitMetrics'
 
 function RMDashboardView({
   customers = [],
@@ -39,32 +31,22 @@ function RMDashboardView({
 }) {
   const today = localDateKey()
   const currentDate = new Date()
-  const currentYear = currentDate.getFullYear()
-  const currentMonth = currentDate.getMonth() + 1 // 1-12
 
-  // Month & Year Filter
-  const [selectedMonth, setSelectedMonth] = useState(currentMonth)
-  const [selectedYear, setSelectedYear] = useState(currentYear)
+  const [selectedWeekStart, setSelectedWeekStart] = useState(() => getWeekDateRange(currentDate).start)
   const [visitAppointment, setVisitAppointment] = useState(null)
 
-  // Calculate Period Dates
   const periodRange = useMemo(() => {
-    const start = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
-    const lastDay = new Date(selectedYear, selectedMonth, 0).getDate()
-    const end = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`
-    return { start, end, label: `${MONTH_NAMES[selectedMonth - 1]} ${selectedYear}` }
-  }, [selectedMonth, selectedYear])
+    const range = getWeekDateRange(new Date(`${selectedWeekStart}T12:00:00`))
+    return {
+      ...range,
+      label: `${formatDate(range.start)} - ${formatDate(range.end)}`,
+    }
+  }, [selectedWeekStart])
 
-  // Filter ONLY appointments in selected period (workspace already isolated to this RM)
-  const periodAppointments = useMemo(() => {
-    return appointments.filter((apt) => apt.date >= periodRange.start && apt.date <= periodRange.end)
-  }, [appointments, periodRange])
-
-  // Metrics for RM
-  const totalPeriod = periodAppointments.length
-  const completedPeriod = periodAppointments.filter((a) => a.status === 'Selesai').length
-  const rescheduledPeriod = periodAppointments.filter((a) => a.status === 'Reschedule').length
-  const unmetPeriod = periodAppointments.filter((a) => a.status === 'Tidak ditemui').length
+  const visitMetrics = useMemo(
+    () => calculateVisitMetrics(appointments, periodRange),
+    [appointments, periodRange]
+  )
 
   const upcomingAppointments = useMemo(() => {
     return appointments
@@ -84,9 +66,6 @@ function RMDashboardView({
       .sort((a, b) => a.time.localeCompare(b.time))
   }, [appointments, today])
 
-  // Target Achievement
-  const achievementRate = Math.min(100, Math.round((completedPeriod / MONTHLY_TARGET_VISITS) * 100))
-
   const greeting = currentDate.getHours() < 11 ? 'Selamat pagi' : currentDate.getHours() < 15 ? 'Selamat siang' : 'Selamat sore'
   const rmName = userProfile?.nama || 'Relationship Manager'
 
@@ -101,7 +80,7 @@ function RMDashboardView({
       {/* Top Banner Greeting */}
       <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1 rounded bg-[#eaf3fb] px-2 py-0.5 text-[10px] font-bold text-[#00529b] border border-blue-200">
               <UserCheck size={11} /> Relationship Manager
             </span>
@@ -112,34 +91,51 @@ function RMDashboardView({
             {greeting}, {rmName}
           </h2>
           <p className="mt-0.5 text-xs text-slate-500">
-            {formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Pantau target dan agenda kunjungan Anda.
+            {formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Jadwal dan realisasi minggu {periodRange.label}.
           </p>
         </div>
 
-        {/* Period Filter for RM */}
-        <div className="flex items-center gap-2">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(Number(e.target.value))}
-            className="form-control text-xs py-1.5"
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const previousWeek = new Date(`${periodRange.start}T12:00:00`)
+              previousWeek.setDate(previousWeek.getDate() - 7)
+              setSelectedWeekStart(getWeekDateRange(previousWeek).start)
+            }}
+            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
+            aria-label="Minggu sebelumnya"
           >
-            {MONTH_NAMES.map((m, idx) => (
-              <option key={m} value={idx + 1}>{m}</option>
-            ))}
-          </select>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="form-control text-xs py-1.5"
+            <ChevronLeft size={15} />
+          </button>
+          <label className="sr-only" htmlFor="rm-week-start">Pilih minggu</label>
+          <input
+            id="rm-week-start"
+            type="date"
+            value={selectedWeekStart}
+            onChange={(event) => {
+              if (event.target.value) {
+                setSelectedWeekStart(getWeekDateRange(new Date(`${event.target.value}T12:00:00`)).start)
+              }
+            }}
+            className="form-control w-[min(100%,11rem)] flex-1 text-xs py-1.5 sm:w-auto sm:flex-none"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const nextWeek = new Date(`${periodRange.start}T12:00:00`)
+              nextWeek.setDate(nextWeek.getDate() + 7)
+              setSelectedWeekStart(getWeekDateRange(nextWeek).start)
+            }}
+            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
+            aria-label="Minggu berikutnya"
           >
-            {[2024, 2025, 2026, 2027].map((yr) => (
-              <option key={yr} value={yr}>{yr}</option>
-            ))}
-          </select>
+            <ChevronRight size={15} />
+          </button>
           <button
             type="button"
             onClick={() => onNavigate?.('schedule')}
-            className="button-orange text-xs py-1.5 shrink-0"
+            className="button-orange !min-h-[44px] w-full text-xs py-1.5 sm:w-auto"
           >
             <Plus size={14} /> Buat Jadwal
           </button>
@@ -174,14 +170,14 @@ function RMDashboardView({
       )}
 
       {/* 6 RM KPI Summary Cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6">
         {/* Jadwal Periode */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500">Jadwal Saya</span>
             <CalendarDays size={16} className="text-[#00529b]" />
           </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{totalPeriod}</p>
+          <p className="mt-2 text-2xl font-black text-slate-900">{visitMetrics.plannedCount}</p>
           <p className="mt-1 text-[11px] text-slate-500">{periodRange.label}</p>
         </div>
 
@@ -191,8 +187,8 @@ function RMDashboardView({
             <span className="text-xs font-medium text-slate-500">Kunjungan Selesai</span>
             <CalendarCheck2 size={16} className="text-emerald-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-emerald-700">{completedPeriod}</p>
-          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Tervalidasi GPS</p>
+          <p className="mt-2 text-2xl font-black text-emerald-700">{visitMetrics.completedCount}</p>
+          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Realisasi (Selesai)</p>
         </div>
 
         {/* Jadwal Mendatang */}
@@ -211,8 +207,8 @@ function RMDashboardView({
             <span className="text-xs font-medium text-slate-500">Perlu Tindak Lanjut</span>
             <RotateCcw size={16} className="text-amber-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{rescheduledPeriod + unmetPeriod}</p>
-          <p className="mt-1 text-[11px] text-amber-600">{rescheduledPeriod} Reschedule · {unmetPeriod} Unmet</p>
+          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.rescheduledCount + visitMetrics.notMetCount}</p>
+          <p className="mt-1 text-[11px] text-amber-600">{visitMetrics.rescheduledCount} Reschedule · {visitMetrics.notMetCount} Tidak ditemui</p>
         </div>
 
         {/* Follow-up Mendesak */}
@@ -225,27 +221,27 @@ function RMDashboardView({
           <p className="mt-1 text-[11px] text-rose-600">{followUpMetrics.overdueCount} Terlambat · {followUpMetrics.todayCount} Hari Ini</p>
         </div>
 
-        {/* Target Kunjungan Bulanan */}
+        {/* Jadwal yang belum terlaksana */}
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Target Bulanan</span>
-            <Target size={16} className="text-[#00529b]" />
+            <span className="text-xs font-medium text-slate-500">Belum Terlaksana</span>
+            <CalendarClock size={16} className="text-amber-600" />
           </div>
-          <p className="mt-2 text-2xl font-black text-[#00529b]">{completedPeriod}<span className="text-xs text-slate-400 font-normal"> / {MONTHLY_TARGET_VISITS}</span></p>
-          <div className="mt-1.5 h-1.5 w-full rounded-full bg-slate-100 overflow-hidden">
-            <div className="h-full rounded-full bg-[#00529b]" style={{ width: `${achievementRate}%` }} />
-          </div>
+          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.pendingCount}</p>
+          <p className="mt-1 text-[11px] text-slate-500">Terjadwal sampai hari ini</p>
         </div>
       </div>
 
       {/* Peta Sebaran Lokasi Seluruh Nasabah RM */}
-      <CustomerDistributionMap
-        customers={customers}
-        appointments={appointments}
-        isAdmin={false}
-        onNavigate={onNavigate}
-        height="430px"
-      />
+      <div id="rm-customer-map" className="scroll-mt-20">
+        <CustomerDistributionMap
+          customers={customers}
+          appointments={appointments}
+          isAdmin={false}
+          onNavigate={onNavigate}
+          height="430px"
+        />
+      </div>
 
       {/* Main Grid: Agenda Hari Ini & Samping Widgets */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

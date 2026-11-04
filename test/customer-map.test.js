@@ -11,11 +11,6 @@ function isValidCoordinate(lat, lng) {
 
 function filterMapMarkers(markers, filters, currentUser) {
   return markers.filter((m) => {
-    // RM strict data isolation check
-    if (currentUser?.role === 'rm') {
-      if (m.createdByRmId && m.createdByRmId !== currentUser.id) return false
-    }
-
     if (filters.kategori && filters.kategori !== 'Semua' && m.type !== filters.kategori) {
       return false
     }
@@ -99,12 +94,11 @@ describe('Customer Map Filtering & Multi-Marker Attribution', () => {
     assert.ok(rm2Markers.every((m) => m.rmId === 'rm-02'))
   })
 
-  test('RM hanya dapat melihat nasabah binaannya sendiri (mencegah kebocoran lintas RM)', () => {
+  test('RM dapat melihat nasabah bersama pada cabang yang sama', () => {
     const currentRM = { id: 'rm-01', role: 'rm' }
     const visibleToRM1 = filterMapMarkers(sampleCustomers, {}, currentRM)
-    assert.equal(visibleToRM1.length, 2)
-    assert.ok(visibleToRM1.every((m) => m.createdByRmId === 'rm-01'))
-    assert.equal(visibleToRM1.some((m) => m.createdByRmId === 'rm-02'), false)
+    assert.equal(visibleToRM1.length, 4)
+    assert.equal(visibleToRM1.some((m) => m.createdByRmId === 'rm-02'), true)
   })
 
   test('Reset filter mengembalikan seluruh marker sesuai hak akses', () => {

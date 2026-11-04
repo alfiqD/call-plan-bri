@@ -270,7 +270,7 @@ function CustomerDistributionMap({
         </div>
 
         {/* Filter Controls Row */}
-        <div className="mt-3.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-3.5 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {/* Search */}
           <div className="relative col-span-2 sm:col-span-1">
             <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
@@ -353,7 +353,7 @@ function CustomerDistributionMap({
       </div>
 
       {/* Map Canvas */}
-      <div className="relative w-full" style={{ height }}>
+      <div className="relative w-full" style={{ height: `clamp(280px, 55vh, ${height})` }}>
         {allValidMarkers.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center bg-slate-50">
             <MapPin size={32} className="text-slate-300 mb-2" />
