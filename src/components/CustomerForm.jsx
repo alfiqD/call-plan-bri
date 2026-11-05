@@ -11,10 +11,12 @@ const GoogleMapLocation = lazy(() => import('./GoogleMapLocation'))
 
 const emptyCustomer = {
   name: '',
+  customerKind: '',
+  businessType: '',
+  picName: '',
   phone: '',
   noRekening: '',
   address: '',
-  type: 'Prospek',
   loanStatus: 'Belum ada pinjaman',
   latitude: '',
   longitude: '',
@@ -261,8 +263,23 @@ function CustomerForm({ customer, onClose, onSubmit }) {
   return (
     <Modal title={customer ? 'Ubah data nasabah' : 'Tambah nasabah'} description="Simpan informasi kontak yang dibutuhkan untuk perencanaan kunjungan." onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <label className="form-label">Nama lengkap
-          <input name="name" value={form.name} onChange={update} required maxLength={100} placeholder="Nama nasabah" className="form-control" />
+        <label className="form-label">Nama Nasabah
+          <input name="name" value={form.name} onChange={update} required maxLength={150} placeholder="Nama individu atau perusahaan" className="form-control" />
+        </label>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="form-label">Jenis Nasabah
+            <select name="customerKind" value={form.customerKind} onChange={update} className="form-control">
+              <option value="">Pilih jika diketahui</option>
+              <option value="Individu">Individu</option>
+              <option value="Badan Usaha">Badan Usaha</option>
+            </select>
+          </label>
+          <label className="form-label">Jenis Usaha
+            <input name="businessType" value={form.businessType} onChange={update} maxLength={150} placeholder="Opsional — contoh: perdagangan, jasa" className="form-control" />
+          </label>
+        </div>
+        <label className="form-label">Nama PIC
+          <input name="picName" value={form.picName} onChange={update} maxLength={150} placeholder="Nama orang yang menjadi kontak nasabah" className="form-control" />
         </label>
         <label className="form-label">Nomor telepon
           <input name="phone" value={form.phone} onChange={update} required maxLength={24} placeholder="08xx-xxxx-xxxx" className="form-control" />
@@ -270,7 +287,7 @@ function CustomerForm({ customer, onClose, onSubmit }) {
         <label className="form-label">Nomor rekening
           <input name="noRekening" value={form.noRekening} onChange={update} maxLength={50} inputMode="numeric" pattern="[0-9]*" placeholder="Opsional — angka rekening nasabah" className="form-control" />
         </label>
-        <label className="form-label">Alamat kunjungan
+        <label className="form-label">Alamat Usaha / PIC
           <textarea name="address" value={form.address} onChange={update} required maxLength={500} rows={2} placeholder="Ketik alamat di Indonesia; titik peta dicari otomatis" className="form-control resize-y" />
         </label>
         <label className="form-label">Sumber pencarian alamat
@@ -310,12 +327,6 @@ function CustomerForm({ customer, onClose, onSubmit }) {
           </div>
         </details>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="form-label">Kategori
-            <select name="type" value={form.type} onChange={update} className="form-control">
-              <option>Prospek</option>
-              <option>Debitur</option>
-            </select>
-          </label>
           <label className="form-label">Status pinjaman
             <select name="loanStatus" value={form.loanStatus} onChange={update} className="form-control">
               <option>Belum ada pinjaman</option>

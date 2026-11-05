@@ -93,7 +93,7 @@ Dashboard RM dan Admin menyediakan ringkasan jadwal yang direncanakan, realisasi
 
 ### Data Nasabah
 
-Pengguna dapat mencari nasabah, memfilter prospek/debitur, menambahkan atau mengubah data, membuka lokasi, dan menonaktifkan data nasabah. Nomor rekening ditampilkan tersamarkan: hanya empat digit terakhir yang terlihat.
+Pengguna dapat mencari nasabah, menambahkan atau mengubah data, membuka lokasi, dan menonaktifkan data nasabah. Profil nasabah mencakup jenis nasabah, jenis usaha, nama PIC, serta satu alamat usaha/lokasi yang digunakan pada peta dan jadwal. Nomor rekening ditampilkan tersamarkan: hanya empat digit terakhir yang terlihat.
 
 ### Jadwal Kunjungan / Call Plan
 
@@ -112,7 +112,7 @@ Satu baris menyimpan informasi seperti:
 - `id`: identitas unik dari database.
 - `nama`, `alamat`, `no_hp`: data kontak.
 - `no_rekening`: opsional, disimpan sebagai teks agar angka nol di depan tidak hilang.
-- `kategori`: `Prospek` atau `Debitur`.
+- `jenis_nasabah`, `jenis_usaha`, `nama_pic`: klasifikasi dasar dan kontak PIC.
 - `status_pinjaman`: status informasi pinjaman.
 - `latitude`, `longitude`: koordinat lokasi nasabah, boleh kosong sampai lokasi dipilih.
 - `created_at`, `updated_at`, `deleted_at`: waktu pencatatan dan penanda soft delete.

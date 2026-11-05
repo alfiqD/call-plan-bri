@@ -25,9 +25,6 @@ function CustomerFollowUpHistoryModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-900">{customer.name}</span>
-              <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-600 border border-slate-200">
-                {customer.type}
-              </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
               <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1 hover:text-indigo-600">
@@ -35,6 +32,7 @@ function CustomerFollowUpHistoryModal({
               </a>
               {' · '}{customer.address}
             </p>
+            {customer.picName && <p className="mt-1 text-[11px] text-slate-500">PIC: {customer.picName}</p>}
           </div>
 
           <button

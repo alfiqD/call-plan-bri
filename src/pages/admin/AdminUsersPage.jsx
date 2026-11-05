@@ -186,7 +186,7 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
       </div>
 
       {/* Desktop Table Container */}
-      <div className="hidden md:block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+      <div className="hidden xl:block overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -309,7 +309,7 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
       </div>
 
       {/* Mobile Card List View */}
-      <div className="block md:hidden space-y-3">
+      <div className="block xl:hidden space-y-3">
         {filteredUsers.length > 0 ? (
           filteredUsers.map((u) => {
             const isBusy = updatingId === u.id

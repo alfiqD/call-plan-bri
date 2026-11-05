@@ -4,12 +4,12 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
-  Camera,
   ChevronDown,
   Clock3,
   MapPin,
   Navigation,
   Pencil,
+  Phone,
   Plus,
   Route,
   Trash2,
@@ -169,7 +169,7 @@ function SchedulePage({
               className="form-control h-8 min-w-36 appearance-none pr-8 text-xs font-medium"
               aria-label="Filter status kunjungan"
             >
-              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
+              {['Semua status', 'Terjadwal', 'Execute', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
@@ -245,6 +245,8 @@ function SchedulePage({
                           const cust = getCustomer(customers, appointment.customerId)
                           const statusBg = appointment.status === 'Selesai'
                             ? 'bg-emerald-50 text-emerald-700'
+                            : appointment.status === 'Execute'
+                              ? 'bg-indigo-50 text-indigo-700'
                             : appointment.status === 'Reschedule'
                               ? 'bg-amber-50 text-amber-700'
                               : 'bg-blue-50 text-[#00529b]'
@@ -266,6 +268,8 @@ function SchedulePage({
                                 className={`size-1 rounded-full ${
                                   appointment.status === 'Selesai'
                                     ? 'bg-emerald-500'
+                                    : appointment.status === 'Execute'
+                                      ? 'bg-indigo-500'
                                     : appointment.status === 'Reschedule'
                                       ? 'bg-amber-500'
                                       : 'bg-[#00529b]'
@@ -488,11 +492,6 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
                 Prio
               </span>
             )}
-            {(appointment.locationPhoto || appointment.documentationPhoto || appointment.evidence) && (
-              <span className="inline-flex items-center gap-0.5 rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600 border border-slate-200" title="Ada lampiran foto bukti">
-                <Camera size={10} className="text-[#00529b]" /> Foto
-              </span>
-            )}
           </div>
           <p className="mt-0.5 text-[11px] text-slate-500 truncate">
             {appointment.purpose}
@@ -503,6 +502,16 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
               </>
             )}
           </p>
+          {(customer?.picName || customer?.phone) && (
+            <p className="mt-1 text-[10px] text-slate-500">
+              {customer?.picName && <span>PIC: {customer.picName}{customer?.phone ? ' · ' : ''}</span>}
+              {customer?.phone && (
+                <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1 text-[#00529b] hover:underline">
+                  <Phone size={10} /> {customer.phone}
+                </a>
+              )}
+            </p>
+          )}
           {customer?.address && (
             <button
               type="button"

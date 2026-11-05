@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { createId } from '../data/workspace'
 import Modal from './Modal'
 
 const initialValue = {
@@ -26,7 +25,7 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
     try {
       await onSubmit({
         ...form,
-        id: appointment?.id || createId('jadwal'),
+        id: appointment?.id,
         status: appointment?.status || 'Terjadwal',
         notes: appointment?.notes || '',
         evidence: appointment?.evidence || '',
@@ -50,7 +49,11 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
         <label className="form-label">Nasabah
           <select name="customerId" value={form.customerId} onChange={update} required className="form-control">
             <option value="">Pilih nasabah</option>
-            {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.address}</option>)}
+            {customers.map((customer) => (
+              <option key={customer.id} value={customer.id}>
+                {customer.name}{customer.picName ? ` · PIC: ${customer.picName}` : ''} · {customer.phone} · {customer.address}
+              </option>
+            ))}
           </select>
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

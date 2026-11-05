@@ -288,7 +288,7 @@ function AuditLogPage({ isAdmin, onNavigate }) {
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="hidden xl:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
         <table className="w-full text-left">
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
@@ -400,7 +400,7 @@ function AuditLogPage({ isAdmin, onNavigate }) {
       </div>
 
       {/* Mobile Card List View */}
-      <div className="block md:hidden space-y-3">
+      <div className="block xl:hidden space-y-3">
         {logs.length > 0 ? (
           logs.map((item) => {
             const badgeColor = actionBadgeColors[item.action] || 'bg-slate-100 text-slate-700 border-slate-200'

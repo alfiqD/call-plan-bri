@@ -51,6 +51,9 @@ for (const row of rawNasabahs) {
   if (!row.nama || !row.nama.trim()) warnings.push('Nama kosong')
   if (!row.alamat || !row.alamat.trim()) warnings.push('Alamat kosong')
   if (!row.no_hp || !row.no_hp.trim()) warnings.push('Nomor HP kosong')
+  if (row.jenis_nasabah && !['Individu', 'Badan Usaha'].includes(row.jenis_nasabah)) {
+    warnings.push(`Jenis nasabah tidak dikenal: ${row.jenis_nasabah}`)
+  }
 
   let latitude = row.latitude !== null && row.latitude !== undefined && row.latitude !== '' ? Number(row.latitude) : null
   let longitude = row.longitude !== null && row.longitude !== undefined && row.longitude !== '' ? Number(row.longitude) : null
@@ -67,10 +70,12 @@ for (const row of rawNasabahs) {
   const cleanRow = {
     id: row.id,
     nama: row.nama?.trim() || 'Nasabah Tanpa Nama',
+    jenis_nasabah: ['Individu', 'Badan Usaha'].includes(row.jenis_nasabah) ? row.jenis_nasabah : null,
+    jenis_usaha: row.jenis_usaha?.trim() || null,
+    nama_pic: row.nama_pic?.trim() || null,
     alamat: row.alamat?.trim() || '-',
     no_hp: row.no_hp?.trim() || '-',
     no_rekening: row.no_rekening ? String(row.no_rekening).trim() : null,
-    kategori: ['Prospek', 'Debitur'].includes(row.kategori) ? row.kategori : 'Prospek',
     status_pinjaman: [
       'Belum ada pinjaman',
       'Dalam pengajuan',

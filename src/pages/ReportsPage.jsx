@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Building2, CalendarDays, Camera, CheckCircle2, Download, FileSpreadsheet, Printer, Search, UsersRound } from 'lucide-react'
+import { CalendarDays, CheckCircle2, Download, FileSpreadsheet, Printer, Search, UsersRound } from 'lucide-react'
 import StatusBadge from '../components/StatusBadge'
-import Modal from '../components/Modal'
 import { formatDate, getCustomer, localDateKey } from '../data/workspace'
 
 const monthStart = () => {
@@ -15,7 +14,6 @@ function ReportsPage({ customers, appointments }) {
   const [toDate, setToDate] = useState(localDateKey())
   const [statusFilter, setStatusFilter] = useState('Semua status')
   const [query, setQuery] = useState('')
-  const [viewingPhoto, setViewingPhoto] = useState(null)
   const reportAppointments = useMemo(() => appointments
     .filter((appointment) => appointment.date >= fromDate && appointment.date <= toDate)
     .filter((appointment) => statusFilter === 'Semua status' || appointment.status === statusFilter)
@@ -39,7 +37,7 @@ function ReportsPage({ customers, appointments }) {
   }
 
   const exportCsv = () => {
-    const headers = ['Tanggal', 'Jam', 'Nama Nasabah', 'Telepon', 'Alamat', 'Tujuan Kunjungan', 'Prioritas', 'Status', 'Catatan Hasil']
+    const headers = ['Tanggal', 'Jam', 'Nama Nasabah', 'Telepon', 'Alamat', 'Tujuan Kunjungan', 'Prioritas', 'Status']
     const dataRows = reportAppointments.map((appointment) => {
       const customer = getCustomer(customers, appointment.customerId)
       return [
@@ -51,7 +49,6 @@ function ReportsPage({ customers, appointments }) {
         appointment.purpose,
         appointment.priority,
         appointment.status,
-        appointment.notes || '-',
       ]
     })
 
@@ -75,9 +72,9 @@ function ReportsPage({ customers, appointments }) {
       {/* Top Header & Export Actions */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Laporan & Riwayat Kunjungan</h2>
+          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Status Kunjungan</h2>
           <p className="mt-1 text-xs text-slate-500">
-            Rekapitulasi aktivitas kunjungan nasabah Bank BRI KCP Iskandar Palembang
+            Rekap status hasil kunjungan nasabah Bank BRI KCP Iskandar Palembang
           </p>
         </div>
         <div className="report-actions flex w-full flex-col flex-wrap items-stretch gap-2 sm:w-auto sm:flex-row">
@@ -136,7 +133,7 @@ function ReportsPage({ customers, appointments }) {
               onChange={(event) => setStatusFilter(event.target.value)}
               className="form-control text-xs"
             >
-              {['Semua status', 'Terjadwal', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
+              {['Semua status', 'Terjadwal', 'Execute', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
@@ -206,7 +203,6 @@ function ReportsPage({ customers, appointments }) {
                     {customer.phone}
                   </a>
                 )}
-                <p className="break-words text-slate-600">{appointment.notes || 'Belum ada catatan hasil'}</p>
                 {appointment.checkInAccuracy && (
                   <p className="text-[11px] font-mono text-slate-500">
                     GPS: ±{Math.round(appointment.checkInAccuracy)}m
@@ -214,31 +210,6 @@ function ReportsPage({ customers, appointments }) {
                   </p>
                 )}
               </div>
-              {(appointment.locationPhoto || appointment.documentationPhoto || appointment.evidence) && (
-                <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-100 pt-3">
-                  {appointment.locationPhoto && (
-                    <button
-                      type="button"
-                      onClick={() => setViewingPhoto({ title: `Foto Lokasi: ${customer?.name}`, src: appointment.locationPhoto })}
-                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-[#00529b]"
-                    >
-                      <Building2 size={13} /> Foto Lokasi
-                    </button>
-                  )}
-                  {(appointment.documentationPhoto || (!appointment.locationPhoto && !appointment.documentationPhoto && appointment.evidence)) && (
-                    <button
-                      type="button"
-                      onClick={() => setViewingPhoto({
-                        title: `Foto Dokumentasi: ${customer?.name}`,
-                        src: appointment.documentationPhoto || appointment.evidence,
-                      })}
-                      className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700"
-                    >
-                      <Camera size={13} /> Dokumentasi
-                    </button>
-                  )}
-                </div>
-              )}
             </article>
           )
         }) : (
@@ -270,8 +241,6 @@ function ReportsPage({ customers, appointments }) {
                 <th className="px-4 py-3">Nasabah</th>
                 <th className="px-4 py-3">Tujuan & Lokasi</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Catatan Hasil</th>
-                <th className="px-5 py-3 text-right">Foto Bukti</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -297,55 +266,12 @@ function ReportsPage({ customers, appointments }) {
                       <td className="px-4 py-3.5 whitespace-nowrap">
                         <StatusBadge status={appointment.status} />
                       </td>
-                      <td className="max-w-[240px] px-4 py-3.5">
-                        <p className="truncate text-[11px] text-slate-600">{appointment.notes || 'Belum ada catatan'}</p>
-                      </td>
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                        <div className="flex flex-col items-end gap-1">
-                          {appointment.locationPhoto && (
-                            <button
-                              type="button"
-                              onClick={() => setViewingPhoto({ title: `Foto Lokasi: ${customer?.name}`, src: appointment.locationPhoto })}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00529b] hover:underline"
-                            >
-                              <Building2 size={11} /> Foto Lokasi
-                            </button>
-                          )}
-                          {appointment.documentationPhoto && (
-                            <button
-                              type="button"
-                              onClick={() => setViewingPhoto({ title: `Foto Dokumentasi: ${customer?.name}`, src: appointment.documentationPhoto })}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:underline"
-                            >
-                              <Camera size={11} /> Dokumentasi
-                            </button>
-                          )}
-                          {!appointment.locationPhoto && !appointment.documentationPhoto && appointment.evidence && (
-                            <button
-                              type="button"
-                              onClick={() => setViewingPhoto({ title: `Bukti Foto: ${customer?.name}`, src: appointment.evidence })}
-                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#00529b] hover:underline"
-                            >
-                              <Camera size={11} /> Lihat Foto
-                            </button>
-                          )}
-                          {!appointment.locationPhoto && !appointment.documentationPhoto && !appointment.evidence && (
-                            <span className="text-slate-300">—</span>
-                          )}
-                          {appointment.checkInAccuracy && (
-                            <span className="text-[9px] text-slate-400 font-mono">
-                              GPS: ±{Math.round(appointment.checkInAccuracy)}m
-                              {appointment.checkInDistanceMeters !== null && appointment.checkInDistanceMeters !== undefined ? ` · ${appointment.checkInDistanceMeters}m` : ''}
-                            </span>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                   )
                 })
               ) : (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-xs text-slate-400">
+                  <td colSpan={4} className="py-12 text-center text-xs text-slate-400">
                     <CalendarDays className="mx-auto size-8 text-slate-300" />
                     <p className="mt-2 text-sm font-semibold text-slate-700">Belum ada riwayat</p>
                     <p className="mt-0.5 text-xs text-slate-400">Coba ubah rentang tanggal atau filter status.</p>
@@ -356,36 +282,11 @@ function ReportsPage({ customers, appointments }) {
           </table>
         </div>
         <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3 text-[11px] text-slate-400">
-          Laporan monitoring aktivitas Relationship Manager Bank BRI KCP Iskandar Palembang
+          Monitoring status kunjungan Relationship Manager Bank BRI KCP Iskandar Palembang
         </div>
       </section>
 
-      {viewingPhoto && (
-        <Modal
-          title={viewingPhoto.title}
-          description="Bukti foto riwayat kunjungan nasabah"
-          onClose={() => setViewingPhoto(null)}
-        >
-          <div className="space-y-3">
-            <div className="max-h-[70vh] overflow-hidden rounded-xl border border-slate-200 bg-slate-900 flex items-center justify-center">
-              <img
-                src={viewingPhoto.src}
-                alt={viewingPhoto.title}
-                className="max-h-[68vh] w-auto max-w-full object-contain"
-              />
-            </div>
-            <div className="flex justify-end pt-2">
-              <button
-                type="button"
-                onClick={() => setViewingPhoto(null)}
-                className="button-secondary text-xs"
-              >
-                Tutup
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+
     </div>
   )
 }

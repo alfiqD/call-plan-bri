@@ -4,6 +4,7 @@ import { AUDIT_ACTIONS, ENTITY_TYPES, recordAuditEvent } from './auditLog'
 
 const appointmentStatusFromApi = {
   pending: 'Terjadwal',
+  execute: 'Execute',
   selesai: 'Selesai',
   reschedule: 'Reschedule',
   tidak_ditemui: 'Tidak ditemui',
@@ -14,10 +15,12 @@ export function mapCustomerFromDb(customer) {
   return {
     id: customer.id,
     name: customer.nama,
+    customerKind: customer.jenis_nasabah || '',
+    businessType: customer.jenis_usaha || '',
+    picName: customer.nama_pic || '',
     phone: customer.no_hp,
     noRekening: customer.no_rekening || '',
     address: customer.alamat,
-    type: customer.kategori || 'Prospek',
     loanStatus: customer.status_pinjaman || 'Belum ada pinjaman',
     latitude: customer.latitude === null || customer.latitude === undefined ? '' : String(customer.latitude),
     longitude: customer.longitude === null || customer.longitude === undefined ? '' : String(customer.longitude),
@@ -84,10 +87,12 @@ async function fetchAppointmentsSupabase() {
 async function saveCustomerSupabase(customer) {
   const payload = {
     nama: customer.name.trim(),
+    jenis_nasabah: customer.customerKind || null,
+    jenis_usaha: customer.businessType?.trim() || null,
+    nama_pic: customer.picName?.trim() || null,
     alamat: customer.address.trim(),
     no_hp: customer.phone.trim(),
     no_rekening: customer.noRekening?.trim() || null,
-    kategori: customer.type,
     status_pinjaman: customer.loanStatus,
     latitude: customer.latitude === '' || customer.latitude == null ? null : Number(customer.latitude),
     longitude: customer.longitude === '' || customer.longitude == null ? null : Number(customer.longitude),
@@ -185,18 +190,41 @@ async function saveAppointmentSupabase(appointment) {
   }
 
   // Insert new
+  const createdAt = new Date().toISOString()
   const { data, error } = await supabase
     .from('jadwal_kunjungans')
     .insert([{
       ...payload,
       rm_id: rmId,
       status: 'pending',
+      created_at: createdAt,
     }])
     .select()
-    .single()
+    .maybeSingle()
 
-  if (error) throw new Error(error.message || 'Gagal menambahkan jadwal kunjungan.')
-  return mapAppointmentFromDb(data)
+  if (error) {
+    console.error('Error inserting jadwal to Supabase:', error)
+    throw new Error(error.message || 'Gagal menambahkan jadwal kunjungan.')
+  }
+  if (data) return mapAppointmentFromDb(data)
+
+  // A successful insert can return no row when the active SELECT policy hides it.
+  const { data: insertedAppointment, error: readError } = await supabase
+    .from('jadwal_kunjungans')
+    .select('*')
+    .eq('rm_id', rmId)
+    .eq('nasabah_id', payload.nasabah_id)
+    .eq('created_at', createdAt)
+    .maybeSingle()
+
+  if (readError) {
+    console.error('Error verifying inserted jadwal in Supabase:', readError)
+    throw new Error('Jadwal mungkin sudah tersimpan, tetapi aplikasi tidak dapat memverifikasinya. Periksa kalender sebelum mencoba menyimpan ulang.')
+  }
+  if (!insertedAppointment) {
+    throw new Error('Database tidak mengembalikan jadwal yang baru disimpan. Periksa kalender sebelum mencoba menyimpan ulang; jika tidak terlihat, minta Admin memeriksa akses baca jadwal.')
+  }
+  return mapAppointmentFromDb(insertedAppointment)
 }
 
 async function deleteAppointmentSupabase(appointmentId) {
@@ -208,49 +236,26 @@ async function deleteAppointmentSupabase(appointmentId) {
   if (error) throw new Error(error.message || 'Gagal menghapus jadwal kunjungan.')
 }
 
-async function submitVisitResultSupabase(appointment, { status, notes, newDate, newTime, coordinates, locationPhoto, documentationPhoto }) {
-  const photoPayload = {}
-  if (locationPhoto !== undefined) photoPayload.foto_lokasi = locationPhoto || null
-  if (documentationPhoto !== undefined) photoPayload.foto_kunjungan = documentationPhoto || null
-
-  const savePhotos = async () => {
-    if (Object.keys(photoPayload).length === 0) return
-    const { data, error } = await supabase
-      .from('jadwal_kunjungans')
-      .update(photoPayload)
-      .eq('id', appointment.id)
-      .select('id')
-      .single()
-
-    if (error || !data) {
-      console.error('Gagal menyimpan foto kunjungan ke Supabase:', error)
-      throw new Error(error?.message || 'Foto kunjungan tidak berhasil disimpan.')
-    }
-  }
-
-  if (status === 'Selesai') {
-    await savePhotos()
-    // Call server-side verified check_in_visit RPC
-    const { data, error } = await supabase.rpc('check_in_visit', {
+async function submitVisitResultSupabase(appointment, { status, newDate, newTime, coordinates }, currentUser) {
+  const legacyNotes = appointment.notes?.trim() || ''
+  if (status === 'Execute') {
+    const { data, error } = await supabase.rpc('submit_visit_for_administration', {
       p_jadwal_id: Number(appointment.id),
       p_lat: Number(coordinates.latitude),
       p_lng: Number(coordinates.longitude),
-      p_notes: notes.trim(),
+      p_notes: legacyNotes || 'Status hasil kunjungan: Execute',
       p_accuracy: coordinates.accuracy ? Number(coordinates.accuracy) : null,
     })
 
     if (error) {
-      console.error('Check-in RPC error:', error)
-      throw new Error(error.message || 'Validasi check-in ditolak oleh server.')
+      console.error('Submit administration RPC error:', error)
+      throw new Error(error.message || 'Gagal mengirim kunjungan ke tahap administrasi.')
     }
 
     return {
       ...appointment,
-      status: 'Selesai',
-      notes: notes.trim(),
-      locationPhoto: locationPhoto || '',
-      documentationPhoto: documentationPhoto || '',
-      evidence: documentationPhoto || locationPhoto || appointment.evidence || '',
+      status: 'Execute',
+      notes: legacyNotes,
       checkInAt: data?.data?.check_in_at || new Date().toISOString(),
       checkInLatitude: coordinates.latitude,
       checkInLongitude: coordinates.longitude,
@@ -259,14 +264,29 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
     }
   }
 
+  if (status === 'Selesai') {
+    if (currentUser?.role !== 'admin' || appointment.status !== 'Execute') {
+      throw new Error('Hanya Admin yang dapat menyelesaikan tahap administrasi setelah kunjungan berstatus Execute.')
+    }
+
+    const { error } = await supabase.rpc('complete_visit_administration', {
+      p_jadwal_id: Number(appointment.id),
+    })
+    if (error) {
+      console.error('Complete visit administration RPC error:', error)
+      throw new Error(error.message || 'Gagal menyelesaikan tahap administrasi kunjungan.')
+    }
+
+    return { ...appointment, status: 'Selesai' }
+  }
+
   if (status === 'Reschedule') {
-    await savePhotos()
     // Call server-side reschedule_visit RPC
     const { error } = await supabase.rpc('reschedule_visit', {
       p_jadwal_id: Number(appointment.id),
       p_new_date: newDate,
       p_new_time: newTime.length === 5 ? `${newTime}:00` : newTime,
-      p_notes: notes.trim(),
+      p_notes: legacyNotes || null,
     })
 
     if (error) {
@@ -277,7 +297,6 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
           status: 'reschedule',
           tanggal: newDate,
           waktu: newTime,
-          catatan_hasil: notes.trim(),
           updated_at: new Date().toISOString(),
         })
         .eq('id', appointment.id)
@@ -290,10 +309,7 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
       status: 'Reschedule',
       date: newDate,
       time: newTime,
-      notes: notes.trim(),
-      locationPhoto: locationPhoto || '',
-      documentationPhoto: documentationPhoto || '',
-      evidence: documentationPhoto || locationPhoto || appointment.evidence || '',
+      notes: legacyNotes,
     }
   }
 
@@ -302,8 +318,6 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
       .from('jadwal_kunjungans')
       .update({
         status: 'batal',
-        catatan_hasil: notes.trim(),
-        ...photoPayload,
         updated_at: new Date().toISOString(),
       })
       .eq('id', appointment.id)
@@ -313,17 +327,14 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
     return {
       ...appointment,
       status: 'Batal',
-      notes: notes.trim(),
-      locationPhoto: locationPhoto || '',
-      documentationPhoto: documentationPhoto || '',
-      evidence: documentationPhoto || locationPhoto || appointment.evidence || '',
+      notes: legacyNotes,
     }
   }
 
   // Tidak ditemui
   const unmetPayload = {
     status: 'tidak_ditemui',
-    catatan_hasil: notes.trim(),
+    catatan_hasil: legacyNotes || 'Status hasil kunjungan: Tidak ditemui',
     updated_at: new Date().toISOString(),
   }
 
@@ -337,13 +348,12 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
     }
   }
 
-  await savePhotos()
   const { error } = await supabase.rpc('mark_visit_unmet', {
     p_jadwal_id: Number(appointment.id),
-    p_notes: notes.trim(),
+    p_notes: legacyNotes || 'Status hasil kunjungan: Tidak ditemui',
   })
 
-  // Ensure photo and optional GPS fields are persisted
+  // Persist optional GPS fields from the arrival proof.
   const { error: directErr } = await supabase
     .from('jadwal_kunjungans')
     .update(unmetPayload)
@@ -359,10 +369,7 @@ async function submitVisitResultSupabase(appointment, { status, notes, newDate, 
   return {
     ...appointment,
     status: 'Tidak ditemui',
-    notes: notes.trim(),
-    locationPhoto: locationPhoto || '',
-    documentationPhoto: documentationPhoto || '',
-    evidence: documentationPhoto || locationPhoto || appointment.evidence || '',
+    notes: legacyNotes,
     ...(coordinates ? {
       checkInAt: unmetPayload.check_in_at,
       checkInLatitude: unmetPayload.check_in_latitude,
@@ -432,6 +439,7 @@ export async function saveCustomer(customer, currentUser = null) {
       id,
       createdByRmId: customer.createdByRmId || currentUser?.id || 'rm-01',
     }
+    delete savedCustomer.type
     const exists = workspace.customers.some((c) => String(c.id) === id)
     const nextCustomers = exists
       ? workspace.customers.map((c) => String(c.id) === id ? savedCustomer : c)
@@ -445,7 +453,7 @@ export async function saveCustomer(customer, currentUser = null) {
     entityType: ENTITY_TYPES.NASABAH,
     entityId: saved.id,
     actor: currentUser,
-    details: { nama: saved.name, type: saved.type, noRekening: saved.noRekening },
+    details: { nama: saved.name, noRekening: saved.noRekening },
   })
 
   return saved
@@ -532,19 +540,19 @@ export async function submitVisitResult(appointment, visitData, currentUser = nu
   let updatedAppointment = null
 
   if (isSupabaseConfigured() && supabase) {
-    updatedAppointment = await submitVisitResultSupabase(appointment, visitData)
+    updatedAppointment = await submitVisitResultSupabase(appointment, visitData, currentUser)
   } else {
     const { workspace } = readWorkspace()
-    const { status, notes, newDate, newTime, coordinates, locationPhoto, documentationPhoto } = visitData
+    const { status, newDate, newTime, coordinates } = visitData
     let distanceMeters = null
 
-    if (status === 'Selesai') {
+    if (status === 'Execute') {
       const customer = workspace.customers.find((c) => String(c.id) === String(appointment.customerId))
       if (!customer?.latitude || !customer?.longitude) {
         throw new Error('Koordinat lokasi nasabah belum tersedia pada peta.')
       }
       if (!coordinates || coordinates.latitude == null || coordinates.longitude == null) {
-        throw new Error('Koordinat GPS wajib diperoleh untuk menyelesaikan kunjungan.')
+        throw new Error('Koordinat GPS wajib diperoleh untuk mengirim kunjungan ke tahap administrasi.')
       }
       if (coordinates.accuracy && coordinates.accuracy > 100) {
         throw new Error(`Akurasi GPS (±${Math.round(coordinates.accuracy)} meter) melebihi batas toleransi 100 meter.`)
@@ -558,6 +566,8 @@ export async function submitVisitResult(appointment, visitData, currentUser = nu
       if (distanceMeters > 100) {
         throw new Error(`Check-in ditolak. Anda terdeteksi berjarak ${Math.round(distanceMeters)} meter dari titik nasabah (maksimal 100 meter).`)
       }
+    } else if (status === 'Selesai' && (currentUser?.role !== 'admin' || appointment.status !== 'Execute')) {
+      throw new Error('Hanya Admin yang dapat menyelesaikan tahap administrasi setelah kunjungan berstatus Execute.')
     } else if (status === 'Tidak ditemui' && coordinates && coordinates.latitude != null && coordinates.longitude != null) {
       const customer = workspace.customers.find((c) => String(c.id) === String(appointment.customerId))
       if (customer?.latitude && customer?.longitude) {
@@ -570,17 +580,11 @@ export async function submitVisitResult(appointment, visitData, currentUser = nu
       }
     }
 
-    const locPhoto = locationPhoto !== undefined ? locationPhoto : (appointment.locationPhoto || '')
-    const docPhoto = documentationPhoto !== undefined ? documentationPhoto : (appointment.documentationPhoto || '')
-
     updatedAppointment = {
       ...appointment,
       status,
-      notes: notes.trim(),
-      locationPhoto: locPhoto,
-      documentationPhoto: docPhoto,
-      evidence: docPhoto || locPhoto || appointment.evidence || '',
-      ...(status === 'Selesai' || (status === 'Tidak ditemui' && coordinates) ? {
+      notes: appointment.notes?.trim() || '',
+      ...(status === 'Execute' || (status === 'Tidak ditemui' && coordinates) ? {
         checkInAt: new Date().toISOString(),
         checkInLatitude: coordinates.latitude,
         checkInLongitude: coordinates.longitude,
@@ -597,7 +601,8 @@ export async function submitVisitResult(appointment, visitData, currentUser = nu
   }
 
   const actionMap = {
-    Selesai: AUDIT_ACTIONS.CHECK_IN_VISIT,
+    Execute: AUDIT_ACTIONS.CHECK_IN_VISIT,
+    Selesai: AUDIT_ACTIONS.COMPLETE_VISIT_ADMINISTRATION,
     Reschedule: AUDIT_ACTIONS.RESCHEDULE_VISIT,
     'Tidak ditemui': AUDIT_ACTIONS.UNMET_VISIT,
     Batal: AUDIT_ACTIONS.UPDATE_JADWAL,
@@ -610,12 +615,9 @@ export async function submitVisitResult(appointment, visitData, currentUser = nu
     actor: currentUser,
     details: {
       status: visitData.status,
-      notes: visitData.notes,
       newDate: visitData.newDate,
       newTime: visitData.newTime,
       distanceMeters: updatedAppointment.checkInDistanceMeters,
-      hasLocationPhoto: Boolean(updatedAppointment.locationPhoto),
-      hasDocumentationPhoto: Boolean(updatedAppointment.documentationPhoto),
     },
   })
 

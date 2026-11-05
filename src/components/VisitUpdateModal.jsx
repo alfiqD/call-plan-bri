@@ -1,18 +1,12 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   AlertCircle,
-  Building2,
-  Camera,
   CheckCircle2,
-  Image as ImageIcon,
   Info,
   LoaderCircle,
   LocateFixed,
   MapPin,
   RotateCcw,
-  ShieldAlert,
-  Trash2,
-  UploadCloud,
   XCircle,
 } from 'lucide-react'
 import Modal from './Modal'
@@ -26,9 +20,6 @@ import {
   MAX_CHECK_IN_RADIUS_METERS,
   MAX_ALLOWABLE_GPS_ACCURACY_METERS,
 } from '../services/gpsValidation'
-import { uploadVisitPhoto, validatePhotoFile, readFileAsDataUrl } from '../services/storage'
-
-const outcomes = ['Selesai', 'Tidak ditemui', 'Reschedule', 'Batal']
 
 function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onScheduleFollowUp }) {
   const { user, profile, role } = useAuth()
@@ -38,6 +29,12 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     nama: profile?.nama || user?.email?.split('@')[0] || 'RM',
     role: role || 'rm',
   }), [user?.id, user?.email, profile?.nama, role])
+  const isAdmin = currentUser.role === 'admin'
+  const outcomes = appointment.status === 'Execute'
+    ? (isAdmin ? ['Execute', 'Selesai'] : ['Execute'])
+    : appointment.status === 'Selesai'
+      ? ['Selesai']
+      : ['Execute', 'Tidak ditemui', 'Reschedule', 'Batal']
 
   const hasCustomerCoordinates = Boolean(
     customer?.latitude !== '' &&
@@ -48,29 +45,17 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     Number.isFinite(Number(customer.longitude))
   )
 
-  const initialStatus = appointment.status === 'Reschedule'
-    ? 'Reschedule'
-    : appointment.status === 'Tidak ditemui'
-      ? 'Tidak ditemui'
-      : appointment.status === 'Batal'
-        ? 'Batal'
-        : 'Selesai'
+  const initialStatus = ({
+    Execute: 'Execute',
+    Selesai: 'Selesai',
+    Reschedule: 'Reschedule',
+    'Tidak ditemui': 'Tidak ditemui',
+    Batal: 'Batal',
+  })[appointment.status] || 'Execute'
 
   const [status, setStatus] = useState(initialStatus)
-  const [notes, setNotes] = useState(appointment.notes || '')
   const [newDate, setNewDate] = useState(appointment.date)
   const [newTime, setNewTime] = useState(appointment.time)
-
-  // Two Separate Evidence Photos
-  const [locationPhoto, setLocationPhoto] = useState(appointment.locationPhoto || '')
-  const [locationPhotoName, setLocationPhotoName] = useState('')
-  const [locationPhotoFile, setLocationPhotoFile] = useState(null)
-
-  const [documentationPhoto, setDocumentationPhoto] = useState(
-    appointment.documentationPhoto || appointment.evidence || ''
-  )
-  const [documentationPhotoName, setDocumentationPhotoName] = useState('')
-  const [documentationPhotoFile, setDocumentationPhotoFile] = useState(null)
 
   // GPS States
   const [isGpsLoading, setIsGpsLoading] = useState(false)
@@ -98,10 +83,6 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     return d.toISOString().split('T')[0]
   })
   const [followUpType, setFollowUpType] = useState('Melengkapi Dokumen')
-  const [followUpNotes, setFollowUpNotes] = useState('')
-
-  const locationInputRef = useRef(null)
-  const documentationInputRef = useRef(null)
 
   // Calculated distance & GPS validation
   const gpsValidation = useMemo(() => {
@@ -135,63 +116,17 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     }
   }
 
-  // Trigger GPS acquisition when status is Selesai if no GPS fix exists yet
+  // Acquire GPS when submitting a visit into the administration stage.
   useEffect(() => {
-    if (status === 'Selesai' && !gpsFix && !isGpsLoading && hasCustomerCoordinates) {
+    if (status === 'Execute' && appointment.status !== 'Execute' && !gpsFix && !isGpsLoading && hasCustomerCoordinates) {
       fetchGpsCoordinates()
     }
-  }, [status, hasCustomerCoordinates])
-
-  // Handle Photo Selection with Validation
-  const handlePhotoSelect = async (file, type) => {
-    setError('')
-    if (!file) return
-
-    const validation = validatePhotoFile(file)
-    if (!validation.valid) {
-      setError(validation.error)
-      return
-    }
-
-    try {
-      const dataUrl = await readFileAsDataUrl(file)
-      if (type === 'lokasi') {
-        setLocationPhoto(dataUrl)
-        setLocationPhotoName(file.name)
-        setLocationPhotoFile(file)
-      } else {
-        setDocumentationPhoto(dataUrl)
-        setDocumentationPhotoName(file.name)
-        setDocumentationPhotoFile(file)
-      }
-    } catch (readErr) {
-      setError(readErr instanceof Error ? readErr.message : 'Gagal membaca file foto.')
-    }
-  }
-
-  const removePhoto = (type) => {
-    if (type === 'lokasi') {
-      setLocationPhoto('')
-      setLocationPhotoName('')
-      setLocationPhotoFile(null)
-      if (locationInputRef.current) locationInputRef.current.value = ''
-    } else {
-      setDocumentationPhoto('')
-      setDocumentationPhotoName('')
-      setDocumentationPhotoFile(null)
-      if (documentationInputRef.current) documentationInputRef.current.value = ''
-    }
-  }
+  }, [status, hasCustomerCoordinates, appointment.status])
 
   // Form Submit Handler
   const submit = async (event) => {
     event.preventDefault()
     setError('')
-
-    if (!notes.trim()) {
-      setError('Catatan hasil pertemuan wajib diisi.')
-      return
-    }
 
     if (status === 'Reschedule') {
       if (!newDate) {
@@ -206,14 +141,14 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
 
     let coordinatesToSave = null
 
-    if (status === 'Selesai') {
+    if (status === 'Execute') {
       if (!hasCustomerCoordinates) {
         setError('Koordinat nasabah belum tersedia pada peta. Tentukan titik lokasi nasabah sebelum check-in.')
         return
       }
 
       if (!gpsFix) {
-        setError('Koordinat GPS wajib diperoleh untuk menyelesaikan kunjungan. Klik tombol "Ambil Ulang Lokasi".')
+        setError('Koordinat GPS wajib diperoleh untuk mengirim kunjungan ke tahap administrasi. Klik tombol "Ambil Ulang Lokasi".')
         return
       }
 
@@ -253,38 +188,18 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     try {
       validateAppointmentApiReady(appointment)
 
-      // Upload photos to storage (or keep data URLs/existing URLs)
-      let finalLocationPhoto = locationPhoto
-      let finalDocumentationPhoto = documentationPhoto
-
-      if (locationPhotoFile) {
-        finalLocationPhoto = await uploadVisitPhoto(locationPhotoFile, appointment.id, 'lokasi')
-      }
-
-      if (documentationPhotoFile) {
-        finalDocumentationPhoto = await uploadVisitPhoto(documentationPhotoFile, appointment.id, 'dokumentasi')
-      }
-
       const savedAppointment = await submitVisitResult(
         appointment,
         {
           status,
-          notes: notes.trim(),
           newDate,
           newTime,
           coordinates: coordinatesToSave,
-          locationPhoto: finalLocationPhoto,
-          documentationPhoto: finalDocumentationPhoto,
         },
         currentUser
       )
 
-      await onSubmit({
-        ...savedAppointment,
-        locationPhoto: finalLocationPhoto,
-        documentationPhoto: finalDocumentationPhoto,
-        evidence: finalDocumentationPhoto || finalLocationPhoto || appointment.evidence || '',
-      })
+      await onSubmit(savedAppointment)
 
       if (createFollowUp && onScheduleFollowUp) {
         await onScheduleFollowUp({
@@ -293,7 +208,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
           date: followUpDate,
           time: '09:00',
           type: followUpType,
-          notes: followUpNotes.trim() || `Tindak lanjut kunjungan: ${notes.trim()}`,
+          notes: `Follow-up dari kunjungan ${appointment.date}`,
           priority: 'Normal',
           status: 'Belum Dilakukan',
         })
@@ -311,7 +226,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
   return (
     <Modal
       title="Update Hasil Kunjungan"
-      description="Catat hasil pertemuan, status, validasi lokasi GPS, dan dokumentasi foto."
+      description="Catat status hasil kunjungan serta validasi lokasi GPS/check-in."
       onClose={onClose}
     >
       <form onSubmit={submit} className="space-y-4">
@@ -320,7 +235,16 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800 truncate">{customer?.name || 'Nasabah'}</p>
-              <p className="mt-0.5 text-[11px] text-slate-500">{appointment.time} · {appointment.purpose}</p>
+              {customer?.picName && <p className="mt-0.5 text-[11px] text-slate-600">PIC: {customer.picName}</p>}
+              {customer?.phone && (
+                <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="mt-0.5 inline-flex text-[11px] text-[#00529b] hover:underline">
+                  No. HP: {customer.phone}
+                </a>
+              )}
+              <p className="mt-0.5 text-[11px] text-slate-500">
+                RM: {currentUser.nama} · {appointment.date} · {appointment.time}
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-500">{appointment.purpose}</p>
               {customer?.address && (
                 <p className="mt-1 flex items-start gap-1 text-[11px] text-slate-600 line-clamp-1">
                   <MapPin className="mt-0.5 size-3 shrink-0 text-slate-400" />
@@ -330,6 +254,13 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
             </div>
             <StatusBadge status={appointment.status} />
           </div>
+          {appointment.status === 'Execute' && (
+            <p className="mt-2 border-t border-slate-200 pt-2 text-[11px] text-slate-600">
+              {isAdmin
+                ? 'Kunjungan sedang dalam tahap administrasi. Tandai Selesai setelah proses administrasi rampung.'
+                : 'Kunjungan sudah dikirim ke tahap administrasi dan menunggu penyelesaian oleh Admin.'}
+            </p>
+          )}
         </div>
 
         {/* Status Selection */}
@@ -383,7 +314,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
         )}
 
         {/* GPS Check-In Section */}
-        {status === 'Selesai' && (
+        {status === 'Execute' && appointment.status !== 'Execute' && (
           <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-3">
             <div className="flex flex-col items-stretch justify-between gap-2 border-b border-blue-100 pb-2.5 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
@@ -416,7 +347,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                 <div>
                   <p className="font-semibold">Titik koordinat nasabah belum ditentukan pada peta.</p>
                   <p className="mt-0.5 text-[11px]">
-                    Check-in Selesai mewajibkan validasi radius 100 meter. Silakan perbarui data nasabah lalu tandai titik lokasinya di peta terlebih dahulu.
+                    Check-in untuk mengirim kunjungan ke tahap administrasi mewajibkan validasi radius 100 meter. Perbarui data nasabah lalu tandai titik lokasinya di peta terlebih dahulu.
                   </p>
                 </div>
               </div>
@@ -531,162 +462,6 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
           </div>
         )}
 
-        {/* Catatan Hasil Pertemuan */}
-        <label className="form-label">
-          Catatan hasil pertemuan <span className="text-rose-500">*</span>
-          <textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            rows={3}
-            placeholder="Contoh: bertemu langsung dengan nasabah, nasabah meminta penawaran top-up diperpanjang..."
-            required
-            className="form-control resize-y mt-1"
-          />
-        </label>
-
-        {/* Section A: Dua Form Foto Bukti Kunjungan */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-start gap-2 rounded-xl bg-blue-50/60 border border-blue-100 p-3 text-[11px] leading-relaxed text-[#003b70]">
-            <ShieldAlert className="size-4 shrink-0 text-[#00529b] mt-0.5" />
-            <div>
-              <span className="font-bold text-[#00529b]">Jaga Privasi & Keamanan Nasabah: </span>
-              Hindari memotret dokumen rahasia, nomor rekening, saldo/buku tabungan, PIN/kartu ATM, atau identitas pribadi sensitif lainnya.
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Foto 1: Foto Lokasi Nasabah */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <Building2 size={15} className="text-[#00529b]" />
-                  <span className="text-xs font-bold text-slate-800">Foto Lokasi Nasabah</span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500 leading-normal">
-                  Unggah foto lokasi yang dikunjungi, seperti rumah, toko, kantor, atau tempat usaha.
-                </p>
-              </div>
-
-              <div className="mt-3">
-                <input
-                  ref={locationInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
-                  className="sr-only"
-                  onChange={(e) => handlePhotoSelect(e.target.files?.[0], 'lokasi')}
-                />
-
-                {locationPhoto ? (
-                  <div className="space-y-2">
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                      <img
-                        src={locationPhoto}
-                        alt="Preview Foto Lokasi"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    {locationPhotoName && (
-                      <p className="text-[10px] text-slate-500 truncate">{locationPhotoName}</p>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => locationInputRef.current?.click()}
-                        className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-white py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
-                      >
-                        Ganti Foto
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePhoto('lokasi')}
-                        className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 transition"
-                        title="Hapus Foto"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => locationInputRef.current?.click()}
-                    className="min-h-28 w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-center transition hover:border-[#00529b] hover:bg-blue-50/30"
-                  >
-                    <UploadCloud className="mx-auto size-5 text-slate-400" />
-                    <span className="mt-1.5 block text-xs font-semibold text-slate-700">Pilih Foto Lokasi</span>
-                    <span className="mt-0.5 block text-[10px] text-slate-400">Maks. 1 MB · Opsional</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Foto 2: Foto Dokumentasi Kunjungan */}
-            <div className="rounded-xl border border-slate-200 bg-white p-3.5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5">
-                  <Camera size={15} className="text-[#00529b]" />
-                  <span className="text-xs font-bold text-slate-800">Foto Dokumentasi Kunjungan</span>
-                </div>
-                <p className="mt-1 text-[11px] text-slate-500 leading-normal">
-                  Unggah dokumentasi aktivitas kunjungan yang dilakukan.
-                </p>
-              </div>
-
-              <div className="mt-3">
-                <input
-                  ref={documentationInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/jpg"
-                  className="sr-only"
-                  onChange={(e) => handlePhotoSelect(e.target.files?.[0], 'dokumentasi')}
-                />
-
-                {documentationPhoto ? (
-                  <div className="space-y-2">
-                    <div className="relative aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-                      <img
-                        src={documentationPhoto}
-                        alt="Preview Foto Dokumentasi"
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                    {documentationPhotoName && (
-                      <p className="text-[10px] text-slate-500 truncate">{documentationPhotoName}</p>
-                    )}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => documentationInputRef.current?.click()}
-                        className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-white py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-50 transition"
-                      >
-                        Ganti Foto
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removePhoto('dokumentasi')}
-                        className="rounded-md border border-rose-200 bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700 hover:bg-rose-100 transition"
-                        title="Hapus Foto"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => documentationInputRef.current?.click()}
-                    className="min-h-28 w-full cursor-pointer rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-5 text-center transition hover:border-[#00529b] hover:bg-blue-50/30"
-                  >
-                    <UploadCloud className="mx-auto size-5 text-slate-400" />
-                    <span className="mt-1.5 block text-xs font-semibold text-slate-700">Pilih Foto Dokumentasi</span>
-                    <span className="mt-0.5 block text-[10px] text-slate-400">Maks. 1 MB · Opsional</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Follow-up Scheduler Section */}
         <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-3.5">
           <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-[#00529b]">
@@ -725,18 +500,6 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                   <option>Lainnya</option>
                 </select>
               </label>
-              <div className="sm:col-span-2">
-                <label className="text-[11px] font-semibold text-slate-700">
-                  Catatan Tindak Lanjut
-                  <input
-                    type="text"
-                    value={followUpNotes}
-                    onChange={(e) => setFollowUpNotes(e.target.value)}
-                    placeholder="Contoh: Mengambil berkas jaminan yang telah ditandatangani"
-                    className="form-control mt-1 text-xs"
-                  />
-                </label>
-              </div>
             </div>
           )}
         </div>
@@ -758,17 +521,19 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
             disabled={
               isSaving ||
               isGpsLoading ||
-              (status === 'Selesai' && (!hasCustomerCoordinates || !gpsFix || (gpsValidation && !gpsValidation.isValid)))
+              appointment.status === 'Selesai' ||
+              (appointment.status === 'Execute' && (!isAdmin || status === 'Execute')) ||
+              (status === 'Execute' && appointment.status !== 'Execute' && (!hasCustomerCoordinates || !gpsFix || (gpsValidation && !gpsValidation.isValid)))
             }
             className="button-orange !min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             {isSaving ? (
               <>
                 <LoaderCircle size={14} className="animate-spin" />
-                <span>Menyimpan Hasil Kunjungan...</span>
+                <span>Menyimpan Status Kunjungan...</span>
               </>
             ) : (
-              <span>Simpan Hasil Kunjungan</span>
+              <span>{status === 'Selesai' ? 'Selesaikan Administrasi' : status === 'Execute' ? 'Kirim ke Tahap Administrasi' : 'Simpan Status Kunjungan'}</span>
             )}
           </button>
         </div>

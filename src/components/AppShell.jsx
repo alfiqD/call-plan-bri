@@ -23,7 +23,7 @@ const pageInfo = {
   customers: { title: 'Data Nasabah', subtitle: 'Daftar debitur dan prospek KCP Iskandar Palembang' },
   schedule: { title: 'Jadwal Kunjungan', subtitle: 'Agenda dan rute kunjungan Relationship Manager' },
   'follow-up': { title: 'Follow-up Reminder', subtitle: 'Pengingat dan riwayat tindak lanjut nasabah' },
-  reports: { title: 'Laporan Kunjungan', subtitle: 'Rekapitulasi riwayat aktivitas lapangan' },
+  reports: { title: 'Status Kunjungan', subtitle: 'Rekap status hasil kunjungan lapangan' },
   'admin-users': { title: 'Kelola Pengguna', subtitle: 'Administrasi dan persetujuan akun pengguna' },
 }
 
@@ -109,7 +109,7 @@ function AppShell({
     : 'bg-blue-50 text-blue-700 border-blue-200'
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 antialiased">
+    <div className="workspace-shell min-h-screen text-slate-800 antialiased">
       {/* Desktop Sidebar */}
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] lg:block">
         <Sidebar
@@ -157,7 +157,7 @@ function AppShell({
       {/* Main Body */}
       <div className="lg:pl-[240px]">
         {/* Top Header */}
-        <header className="sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 sm:h-16 sm:px-6 xl:px-8">
+        <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b border-slate-200 px-3 sm:h-16 sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <button
               className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
@@ -343,7 +343,7 @@ function AppShell({
         )}
 
         {/* Content Area */}
-        <main className={`mx-auto min-w-0 max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 xl:px-8 ${
+        <main className={`workspace-main mx-auto min-w-0 max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 xl:px-8 ${
           role === 'rm'
             ? 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6'
             : 'pb-4 sm:pb-6'

@@ -24,7 +24,7 @@ function PendingApprovalPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#001736] via-[#002D62] to-[#004785] p-4 sm:p-6 lg:p-8">
+    <div className="auth-page relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
       {/* Decorative Background Elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-48 -top-48 size-96 rounded-full bg-[#00529C]/30 blur-3xl" />
@@ -40,9 +40,9 @@ function PendingApprovalPage() {
       </div>
 
       <div className="relative z-10 w-full max-w-lg">
-        <div className="overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
+        <div className="auth-card overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
           {/* Top BRI Brand Header */}
-          <div className="bg-gradient-to-r from-[#002046] via-[#003875] to-[#00529C] p-6 text-white text-center">
+          <div className="auth-showcase bg-gradient-to-r from-[#002046] via-[#003875] to-[#00529C] p-6 text-white text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/25">
               <Compass size={26} strokeWidth={2.3} className="text-white" />
             </div>

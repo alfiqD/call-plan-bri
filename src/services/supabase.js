@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 
-const rawUrl = (import.meta?.env?.VITE_SUPABASE_URL || '').trim()
+const rawUrl = (import.meta.env?.VITE_SUPABASE_URL || '').trim()
 export const SUPABASE_URL = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '')
-const SUPABASE_ANON_KEY = (import.meta?.env?.VITE_SUPABASE_ANON_KEY || '').trim()
+const SUPABASE_ANON_KEY = (import.meta.env?.VITE_SUPABASE_ANON_KEY || '').trim()
 
 export function createSupabaseAuthStorage(localStorage, sessionStorage) {
   return {

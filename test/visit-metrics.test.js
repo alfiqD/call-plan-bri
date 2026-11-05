@@ -22,13 +22,14 @@ describe('Weekly visit metrics', () => {
         status: 'Selesai',
       })),
       { date: '2026-11-06', status: 'Terjadwal' },
+      { date: '2026-11-06', status: 'Execute' },
       { date: '2026-11-07', status: 'Batal' },
     ]
 
     assert.deepEqual(
       calculateVisitMetrics(appointments, { start: '2026-11-02', end: '2026-11-08' }),
       {
-        plannedCount: 5,
+        plannedCount: 6,
         completedCount: 4,
         pendingCount: 1,
         rescheduledCount: 0,

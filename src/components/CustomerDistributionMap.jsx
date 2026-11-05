@@ -77,7 +77,6 @@ function CustomerDistributionMap({
   height = '480px',
   className = '',
 }) {
-  const [selectedKategori, setSelectedKategori] = useState('Semua') // 'Semua', 'Debitur', 'Prospek'
   const [selectedStatusKunjungan, setSelectedStatusKunjungan] = useState('Semua')
   const [selectedWilayah, setSelectedWilayah] = useState('Semua')
   const [selectedRmId, setSelectedRmId] = useState('Semua')
@@ -140,7 +139,7 @@ function CustomerDistributionMap({
           name: c.name,
           phone: c.phone,
           address: c.address,
-          type: c.type || 'Prospek',
+          picName: c.picName || '',
           loanStatus: c.loanStatus || 'Belum ada pinjaman',
           noRekening: c.noRekening || '',
           lat,
@@ -156,9 +155,6 @@ function CustomerDistributionMap({
   // Filter markers according to user selections
   const filteredMarkers = useMemo(() => {
     return allValidMarkers.filter((m) => {
-      // Filter kategori
-      if (selectedKategori !== 'Semua' && m.type !== selectedKategori) return false
-
       // Filter status kunjungan
       if (selectedStatusKunjungan !== 'Semua') {
         if (m.visitStatus !== selectedStatusKunjungan) return false
@@ -185,10 +181,9 @@ function CustomerDistributionMap({
 
       return true
     })
-  }, [allValidMarkers, selectedKategori, selectedStatusKunjungan, selectedWilayah, selectedRmId, searchQuery, isAdmin])
+  }, [allValidMarkers, selectedStatusKunjungan, selectedWilayah, selectedRmId, searchQuery, isAdmin])
 
   const handleResetFilters = () => {
-    setSelectedKategori('Semua')
     setSelectedStatusKunjungan('Semua')
     setSelectedWilayah('Semua')
     setSelectedRmId('Semua')
@@ -197,16 +192,18 @@ function CustomerDistributionMap({
   }
 
   const hasActiveFilters =
-    selectedKategori !== 'Semua' ||
     selectedStatusKunjungan !== 'Semua' ||
     selectedWilayah !== 'Semua' ||
     (isAdmin && selectedRmId !== 'Semua') ||
     Boolean(searchQuery.trim())
 
-  // Determine marker color based on category and visit status
+  // Determine marker color based on visit status
   const getMarkerStyle = (marker) => {
     if (marker.visitStatus === 'Selesai') {
       return { fillColor: '#10b981', color: '#ffffff', label: 'Sudah Dikunjungi' }
+    }
+    if (marker.visitStatus === 'Execute') {
+      return { fillColor: '#6366f1', color: '#ffffff', label: 'Tahap Administrasi' }
     }
     if (marker.visitStatus === 'Reschedule') {
       return { fillColor: '#f59e0b', color: '#ffffff', label: 'Reschedule' }
@@ -214,10 +211,7 @@ function CustomerDistributionMap({
     if (marker.visitStatus === 'Tidak ditemui') {
       return { fillColor: '#ef4444', color: '#ffffff', label: 'Tidak Ditemui' }
     }
-    if (marker.type === 'Debitur') {
-      return { fillColor: '#00529b', color: '#ffffff', label: 'Debitur Aktif' }
-    }
-    return { fillColor: '#f37021', color: '#ffffff', label: 'Nasabah Prospek' }
+    return { fillColor: '#00529b', color: '#ffffff', label: 'Nasabah' }
   }
 
   return (
@@ -239,7 +233,7 @@ function CustomerDistributionMap({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Visualisasi titik geografis debitur &amp; prospek Bank BRI KCP Iskandar Palembang
+                Visualisasi titik geografis nasabah Bank BRI KCP Iskandar Palembang
               </p>
             </div>
           </div>
@@ -283,19 +277,6 @@ function CustomerDistributionMap({
             />
           </div>
 
-          {/* Kategori Nasabah */}
-          <div>
-            <select
-              value={selectedKategori}
-              onChange={(e) => setSelectedKategori(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
-            >
-              <option value="Semua">Semua Kategori</option>
-              <option value="Debitur">Debitur</option>
-              <option value="Prospek">Prospek</option>
-            </select>
-          </div>
-
           {/* Status Kunjungan */}
           <div>
             <select
@@ -304,6 +285,7 @@ function CustomerDistributionMap({
               className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
             >
               <option value="Semua">Semua Status Kunjungan</option>
+              <option value="Execute">Execute (Tahap Administrasi)</option>
               <option value="Selesai">Selesai (Sudah Dikunjungi)</option>
               <option value="Terjadwal">Terjadwal (Menunggu)</option>
               <option value="Reschedule">Reschedule</option>
@@ -409,7 +391,7 @@ function CustomerDistributionMap({
                   <Tooltip direction="top" offset={[0, -6]} opacity={0.95}>
                     <span className="text-xs font-bold">{marker.name}</span>
                     <span className="block text-[10px] text-slate-500">
-                      {marker.type} · {marker.visitStatus}
+                      {marker.visitStatus}
                     </span>
                   </Tooltip>
 
@@ -417,18 +399,8 @@ function CustomerDistributionMap({
                     <div className="p-1 space-y-2 text-xs">
                       {/* Name & Badge */}
                       <div className="border-b border-slate-100 pb-1.5">
-                        <div className="flex items-center justify-between gap-1">
-                          <h4 className="font-bold text-slate-900 text-sm truncate">{marker.name}</h4>
-                          <span
-                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                              marker.type === 'Debitur'
-                                ? 'bg-blue-50 text-[#00529b]'
-                                : 'bg-orange-50 text-[#f37021]'
-                            }`}
-                          >
-                            {marker.type}
-                          </span>
-                        </div>
+                        <h4 className="font-bold text-slate-900 text-sm truncate">{marker.name}</h4>
+                        {marker.picName && <p className="mt-0.5 text-[11px] text-slate-500">PIC: {marker.picName}</p>}
                         <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <Phone size={11} /> {marker.phone || '-'}
                         </p>
@@ -489,15 +461,15 @@ function CustomerDistributionMap({
             <span className="font-semibold text-slate-700">Legenda Pin:</span>
             <div className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full bg-[#00529b] ring-1 ring-white" />
-              <span>Debitur</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-[#f37021] ring-1 ring-white" />
-              <span>Prospek</span>
+              <span>Nasabah</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full bg-[#10b981] ring-1 ring-white" />
               <span>Selesai (Dikunjungi)</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="size-2.5 rounded-full bg-[#6366f1] ring-1 ring-white" />
+              <span>Execute (Administrasi)</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full bg-[#f59e0b] ring-1 ring-white" />

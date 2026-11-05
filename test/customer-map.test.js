@@ -11,10 +11,6 @@ function isValidCoordinate(lat, lng) {
 
 function filterMapMarkers(markers, filters, currentUser) {
   return markers.filter((m) => {
-    if (filters.kategori && filters.kategori !== 'Semua' && m.type !== filters.kategori) {
-      return false
-    }
-
     if (filters.statusKunjungan && filters.statusKunjungan !== 'Semua' && m.visitStatus !== filters.statusKunjungan) {
       return false
     }
@@ -62,16 +58,15 @@ describe('Customer Map Coordinate Validation & Sanitization', () => {
 
 describe('Customer Map Filtering & Multi-Marker Attribution', () => {
   const sampleCustomers = [
-    { id: '1', name: 'Budi', type: 'Debitur', address: 'Jl. Merdeka, Palembang', visitStatus: 'Selesai', rmId: 'rm-01', createdByRmId: 'rm-01' },
-    { id: '2', name: 'Siti', type: 'Prospek', address: 'Jl. Sudirman, Palembang', visitStatus: 'Terjadwal', rmId: 'rm-01', createdByRmId: 'rm-01' },
-    { id: '3', name: 'Andi', type: 'Debitur', address: 'Jl. Anggrek, Palembang', visitStatus: 'Reschedule', rmId: 'rm-02', createdByRmId: 'rm-02' },
-    { id: '4', name: 'Dewi', type: 'Prospek', address: 'Jl. Sukajadi, Palembang', visitStatus: 'Belum Ada Jadwal', rmId: 'rm-02', createdByRmId: 'rm-02' },
+    { id: '1', name: 'Budi', address: 'Jl. Merdeka, Palembang', visitStatus: 'Selesai', rmId: 'rm-01', createdByRmId: 'rm-01' },
+    { id: '2', name: 'Siti', address: 'Jl. Sudirman, Palembang', visitStatus: 'Terjadwal', rmId: 'rm-01', createdByRmId: 'rm-01' },
+    { id: '3', name: 'Andi', address: 'Jl. Anggrek, Palembang', visitStatus: 'Reschedule', rmId: 'rm-02', createdByRmId: 'rm-02' },
+    { id: '4', name: 'Dewi', address: 'Jl. Sukajadi, Palembang', visitStatus: 'Belum Ada Jadwal', rmId: 'rm-02', createdByRmId: 'rm-02' },
   ]
 
-  test('memfilter berdasarkan kategori (Debitur vs Prospek)', () => {
-    const debiturs = filterMapMarkers(sampleCustomers, { kategori: 'Debitur' }, { role: 'admin' })
-    assert.equal(debiturs.length, 2)
-    assert.ok(debiturs.every((d) => d.type === 'Debitur'))
+  test('menampilkan seluruh nasabah tanpa filter kategori', () => {
+    const markers = filterMapMarkers(sampleCustomers, {}, { role: 'admin' })
+    assert.equal(markers.length, 4)
   })
 
   test('memfilter berdasarkan status kunjungan (Selesai vs Reschedule)', () => {
@@ -104,11 +99,11 @@ describe('Customer Map Filtering & Multi-Marker Attribution', () => {
   test('Reset filter mengembalikan seluruh marker sesuai hak akses', () => {
     const adminUser = { role: 'admin' }
     // Filter applied
-    const filtered = filterMapMarkers(sampleCustomers, { kategori: 'Debitur', statusKunjungan: 'Selesai' }, adminUser)
+    const filtered = filterMapMarkers(sampleCustomers, { statusKunjungan: 'Selesai' }, adminUser)
     assert.equal(filtered.length, 1)
 
     // Reset applied (all 'Semua')
-    const reset = filterMapMarkers(sampleCustomers, { kategori: 'Semua', statusKunjungan: 'Semua', wilayah: 'Semua', rmId: 'Semua' }, adminUser)
+    const reset = filterMapMarkers(sampleCustomers, { statusKunjungan: 'Semua', wilayah: 'Semua', rmId: 'Semua' }, adminUser)
     assert.equal(reset.length, 4)
   })
 })

@@ -69,7 +69,7 @@ function LoginPage({ onNavigate }) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#001736] via-[#002D62] to-[#004785] p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
+    <div className="auth-page auth-login-page relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
       {/* Decorative Background Geometric Shapes & Gradients */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-48 -top-48 size-96 rounded-full bg-[#00529C]/30 blur-3xl" />
@@ -87,10 +87,10 @@ function LoginPage({ onNavigate }) {
       </div>
 
       {/* Main Split-Screen Container Card */}
-      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
+      <div className="auth-card auth-login-card relative z-10 w-full max-w-5xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
+        <div className="grid grid-cols-1 xl:grid-cols-12">
           {/* Left Showcase Panel (BRI Corporate Branding & System Highlights) */}
-          <div className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white lg:col-span-5 lg:p-10">
+          <div className="auth-showcase relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white xl:col-span-5 xl:p-10">
             {/* Ambient Accent inside Left Panel */}
             <div className="pointer-events-none absolute -bottom-24 -left-24 size-64 rounded-full bg-[#f37021]/20 blur-2xl" />
             <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#00529C]/40 blur-2xl" />
@@ -118,7 +118,7 @@ function LoginPage({ onNavigate }) {
               </div>
 
               {/* Headline & Value Proposition */}
-              <div className="mt-8 lg:mt-12">
+              <div className="auth-showcase-copy mt-8 lg:mt-12">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-blue-100 backdrop-blur-xs ring-1 ring-white/15">
                   <span className="size-1.5 rounded-full bg-[#f37021]" />
                   Portal Internal Monitoring Nasabah
@@ -132,8 +132,8 @@ function LoginPage({ onNavigate }) {
               </div>
 
               {/* 3 Core System Features */}
-              <div className="mt-8 space-y-3.5">
-                <div className="flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
+              <div className="auth-showcase-features mt-8 space-y-3.5">
+                <div className="auth-showcase-feature flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#00529C]/80 text-[#f37021] shadow-xs">
                     <CalendarDays size={16} />
                   </div>
@@ -145,7 +145,7 @@ function LoginPage({ onNavigate }) {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
+                <div className="auth-showcase-feature flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#00529C]/80 text-emerald-400 shadow-xs">
                     <MapPin size={16} />
                   </div>
@@ -157,7 +157,7 @@ function LoginPage({ onNavigate }) {
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
+                <div className="auth-showcase-feature flex items-start gap-3 rounded-2xl bg-white/10 p-3 backdrop-blur-xs ring-1 ring-white/10 transition hover:bg-white/15">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[#00529C]/80 text-amber-300 shadow-xs">
                     <ShieldCheck size={16} />
                   </div>
@@ -181,7 +181,7 @@ function LoginPage({ onNavigate }) {
           </div>
 
           {/* Right Form Panel (Login Credentials & Quick Demo) */}
-          <div className="flex flex-col justify-between p-7 sm:p-10 lg:col-span-7">
+          <div className="auth-form-panel flex flex-col justify-between p-7 sm:p-10 xl:col-span-7">
             <div>
               {/* Header inside Form Panel */}
               <div className="flex items-center justify-between border-b border-slate-100 pb-4">
@@ -204,7 +204,7 @@ function LoginPage({ onNavigate }) {
               </div>
 
               {/* Quick Demo Access Shortcuts */}
-              <div className="mt-5 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/80 via-white to-orange-50/40 p-3.5">
+              <div className="auth-login-demo mt-5 rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50/80 via-white to-orange-50/40 p-3.5">
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-700">
                     <Zap size={13} className="text-[#f37021]" />
@@ -244,7 +244,7 @@ function LoginPage({ onNavigate }) {
               </div>
 
               {/* Divider */}
-              <div className="relative my-5 text-center text-xs text-slate-400">
+              <div className="auth-login-divider relative my-5 text-center text-xs text-slate-400">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-200" />
                 </div>

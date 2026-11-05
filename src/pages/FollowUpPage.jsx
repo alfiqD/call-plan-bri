@@ -245,7 +245,7 @@ function FollowUpPage({
       </div>
 
       {/* Desktop Table View */}
-      <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="hidden xl:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -288,6 +288,9 @@ function FollowUpPage({
                               {customer?.name || item.customerName || `Nasabah #${item.customerId}`}
                             </p>
                             <p className="mt-0.5 text-[11px] text-slate-500">
+                              {(customer?.picName || item.customerPicName) && (
+                                <span className="mr-2">PIC: {customer?.picName || item.customerPicName}</span>
+                              )}
                               <a
                                 href={`tel:${(customer?.phone || item.customerPhone || '').replace(/[^\d+]/g, '')}`}
                                 className="inline-flex items-center gap-1 hover:text-[#00529b]"
@@ -447,7 +450,7 @@ function FollowUpPage({
       </div>
 
       {/* Mobile Card List View */}
-      <div className="block md:hidden space-y-3">
+      <div className="block xl:hidden space-y-3">
         {filteredList.length > 0 ? (
           filteredList.map((item) => {
             const customer = customers.find((c) => String(c.id) === String(item.customerId))
@@ -473,6 +476,9 @@ function FollowUpPage({
                       <p className="text-[11px] text-slate-500 font-mono">
                         {formatDate(item.date)} · {item.time}
                       </p>
+                      {(customer?.picName || item.customerPicName) && (
+                        <p className="truncate text-[11px] text-slate-500">PIC: {customer?.picName || item.customerPicName}</p>
+                      )}
                     </div>
                   </div>
 

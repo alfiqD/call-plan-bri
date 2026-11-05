@@ -304,7 +304,7 @@ function RMDashboardView({
                           onClick={() => setVisitAppointment(item)}
                           className="button-primary text-xs py-1.5"
                         >
-                          {item.status === 'Selesai' ? 'Lihat / Ubah Hasil' : 'Update / Check-in GPS'}
+                          {item.status === 'Execute' ? 'Menunggu Administrasi' : item.status === 'Selesai' ? 'Kunjungan Selesai' : 'Update / Check-in GPS'}
                         </button>
                       </div>
                     </div>
@@ -373,7 +373,7 @@ function RMDashboardView({
               <span>Standard Operational Procedure (SOP)</span>
             </div>
             <p className="text-[11px] text-slate-600 leading-relaxed">
-              Check-in GPS wajib dilakukan di lokasi nasabah dengan toleransi radius maksimal 100 meter. Pastikan mengambil foto bukti dan mencatat hasil pertemuan secara akurat.
+              Check-in GPS wajib dilakukan di lokasi nasabah dengan toleransi radius maksimal 100 meter. Perbarui status kunjungan setelah pelaksanaan; uraian aktivitas dan tindak lanjut rinci dicatat di aplikasi Laporan Harian RM.
             </p>
           </div>
         </div>

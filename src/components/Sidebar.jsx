@@ -17,7 +17,7 @@ const baseNavigation = [
   { id: 'customers', label: 'Data Nasabah', icon: UsersRound },
   { id: 'schedule', label: 'Jadwal Kunjungan', icon: CalendarDays },
   { id: 'follow-up', label: 'Follow-up Reminder', icon: CalendarClock },
-  { id: 'reports', label: 'Laporan Kunjungan', icon: ClipboardList },
+  { id: 'reports', label: 'Status Kunjungan', icon: ClipboardList },
 ]
 
 function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogoutModal }) {
@@ -37,19 +37,19 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
   const roleLabel = isAdmin ? 'Administrator' : 'Relationship Manager'
 
   return (
-    <div className="flex h-full flex-col border-r border-slate-200 bg-white">
+    <div className="flex h-full flex-col border-r border-[#12395f] bg-gradient-to-b from-[#002046] via-[#002d57] to-[#001a35] text-white">
       {/* Brand Header */}
-      <div className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
-        <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-[#00529b] text-white shadow-sm shadow-[#00529b]/20">
+      <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+        <div className="relative flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#1683ca] to-[#00529b] text-white shadow-lg shadow-blue-950/30 ring-1 ring-white/15">
           <Compass size={20} strokeWidth={2.2} />
-          <span className="absolute -bottom-0.5 right-1 size-2 rounded-full bg-[#f37021] ring-2 ring-white" />
+          <span className="absolute -bottom-0.5 right-1 size-2 rounded-full bg-[#f37021] ring-2 ring-[#002046]" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <span className="text-[16px] font-extrabold tracking-tight text-slate-900">Call<span className="text-[#00529b]">Plan</span></span>
-            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-[9px] font-bold text-[#00529b]">BRI</span>
+            <span className="text-[16px] font-extrabold tracking-tight text-white">Call<span className="text-[#ff914d]">Plan</span></span>
+            <span className="rounded bg-white/10 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-blue-100 ring-1 ring-white/10">BRI</span>
           </div>
-          <p className="truncate text-[11px] font-medium text-slate-500">
+          <p className="truncate text-[11px] font-medium text-blue-100/65">
             KCP Iskandar Palembang
           </p>
         </div>
@@ -57,7 +57,7 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
 
       {/* Navigation Section */}
       <div className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        <p className="px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-blue-100/45">
           Menu Utama
         </p>
         <nav className="space-y-1" aria-label="Navigasi utama">
@@ -67,17 +67,17 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
               <button
                 key={id}
                 onClick={() => onNavigate(id)}
-                className={`group flex min-h-[44px] w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
+                className={`group relative flex min-h-[46px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium transition-colors ${
                   isActive
-                    ? 'bg-[#eaf3fb] text-[#00529b] font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    ? 'bg-white/10 text-white font-semibold shadow-inner shadow-white/5'
+                    : 'text-blue-100/75 hover:bg-white/[0.07] hover:text-white'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
                   size={18}
                   strokeWidth={isActive ? 2.2 : 1.9}
-                  className={isActive ? 'text-[#00529b]' : 'text-slate-400 group-hover:text-slate-600'}
+                  className={isActive ? 'text-[#ff914d]' : 'text-blue-100/50 group-hover:text-blue-100'}
                 />
                 <span className="flex-1 truncate">{label}</span>
                 {id === 'follow-up' && urgentFollowUpCount > 0 && (
@@ -89,7 +89,7 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
                   </span>
                 )}
                 {isActive && (
-                  <span className="size-1.5 rounded-full bg-[#00529b]" />
+                  <span className="absolute inset-y-2 left-0 w-1 rounded-full bg-[#f37021]" />
                 )}
               </button>
             )
@@ -98,16 +98,16 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
       </div>
 
       {/* User Info & Logout Section */}
-      <div className="border-t border-slate-100 bg-slate-50/60 p-3">
-        <div className="rounded-xl bg-white p-2.5 border border-slate-200/80 shadow-xs">
+      <div className="border-t border-white/10 bg-black/10 p-3">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.06] p-3 shadow-lg shadow-black/10">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-xs font-bold text-[#00529b]">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-100/15 text-xs font-bold text-blue-100 ring-1 ring-white/10">
               {displayName.slice(0, 2).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-slate-800">{displayName}</p>
-              <div className="flex items-center gap-1 text-[10px] text-slate-500">
-                {isAdmin ? <Shield size={10} className="text-amber-600" /> : <User size={10} className="text-blue-600" />}
+              <p className="truncate text-xs font-semibold text-white">{displayName}</p>
+              <div className="flex items-center gap-1 text-[10px] text-blue-100/60">
+                {isAdmin ? <Shield size={10} className="text-amber-300" /> : <User size={10} className="text-sky-300" />}
                 <span className="truncate">{roleLabel}</span>
               </div>
             </div>
@@ -116,7 +116,7 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
             type="button"
             onClick={handleLogout}
             title="Keluar dari Akun"
-            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-lg border border-rose-200/80 bg-rose-50/70 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100/90 hover:text-rose-800 active:scale-[0.99] transition shadow-2xs"
+            className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-white/10 bg-white/[0.06] py-2 text-xs font-semibold text-blue-100/80 transition hover:border-rose-300/30 hover:bg-rose-500/15 hover:text-white active:scale-[0.99]"
             aria-label="Keluar dari akun"
           >
             <LogOut size={13} />

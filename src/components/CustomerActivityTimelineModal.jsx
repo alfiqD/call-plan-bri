@@ -187,9 +187,6 @@ function CustomerActivityTimelineModal({
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-900">{customer.name}</span>
-              <span className="rounded bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 border border-slate-200">
-                {customer.type}
-              </span>
               <span className="rounded bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-[#00529b] border border-blue-200">
                 {customer.loanStatus}
               </span>
@@ -199,6 +196,13 @@ function CustomerActivityTimelineModal({
               {customer.phone || '-'} · <MapPin size={12} className="inline mr-1 text-slate-400" />
               {customer.address}
             </p>
+            {(customer.picName || customer.customerKind || customer.businessType) && (
+              <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
+                {customer.picName && <p>PIC: {customer.picName}</p>}
+                {customer.customerKind && <p>Jenis Nasabah: {customer.customerKind}</p>}
+                {customer.businessType && <p>Jenis Usaha: {customer.businessType}</p>}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

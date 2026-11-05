@@ -40,7 +40,7 @@ function ForgotPasswordPage({ onNavigate }) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#001736] via-[#002D62] to-[#004785] p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
+    <div className="auth-page relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
       {/* Decorative Background Elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-48 -top-48 size-96 rounded-full bg-[#00529C]/30 blur-3xl" />
@@ -55,10 +55,10 @@ function ForgotPasswordPage({ onNavigate }) {
         />
       </div>
 
-      <div className="relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
+      <div className="auth-card relative z-10 w-full max-w-4xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
+        <div className="grid grid-cols-1 xl:grid-cols-12">
           {/* Left Showcase */}
-          <div className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white lg:col-span-5 lg:p-10">
+          <div className="auth-showcase relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white xl:col-span-5 xl:p-10">
             <div className="relative">
               <div className="flex items-center gap-3">
                 <div className="relative flex size-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white shadow-inner backdrop-blur-md ring-1 ring-white/25">
@@ -103,7 +103,7 @@ function ForgotPasswordPage({ onNavigate }) {
           </div>
 
           {/* Right Form */}
-          <div className="flex flex-col justify-between p-7 sm:p-10 lg:col-span-7">
+          <div className="auth-form-panel flex flex-col justify-between p-7 sm:p-10 xl:col-span-7">
             {sent ? (
               <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
                 <div className="flex size-18 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/70">

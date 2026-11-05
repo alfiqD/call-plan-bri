@@ -96,7 +96,7 @@ function RegisterPage({ onNavigate }) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-gradient-to-br from-[#001736] via-[#002D62] to-[#004785] p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
+    <div className="auth-page relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8 selection:bg-[#f37021] selection:text-white">
       {/* Decorative Background Elements */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-48 -top-48 size-96 rounded-full bg-[#00529C]/30 blur-3xl" />
@@ -112,10 +112,10 @@ function RegisterPage({ onNavigate }) {
       </div>
 
       {/* Main Container Card */}
-      <div className="relative z-10 w-full max-w-5xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
-        <div className="grid grid-cols-1 lg:grid-cols-12">
+      <div className="auth-card relative z-10 w-full max-w-5xl overflow-hidden rounded-3xl border border-white/20 bg-white/95 shadow-2xl shadow-[#001736]/60 backdrop-blur-xl">
+        <div className="grid grid-cols-1 xl:grid-cols-12">
           {/* Left Showcase Panel */}
-          <div className="relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white lg:col-span-5 lg:p-10">
+          <div className="auth-showcase relative flex flex-col justify-between overflow-hidden bg-gradient-to-br from-[#002046] via-[#003875] to-[#00529C] p-8 text-white xl:col-span-5 xl:p-10">
             <div className="pointer-events-none absolute -bottom-24 -left-24 size-64 rounded-full bg-[#f37021]/20 blur-2xl" />
             <div className="pointer-events-none absolute -right-20 -top-20 size-64 rounded-full bg-[#00529C]/40 blur-2xl" />
 
@@ -190,7 +190,7 @@ function RegisterPage({ onNavigate }) {
           </div>
 
           {/* Right Form Panel */}
-          <div className="flex flex-col justify-between p-7 sm:p-10 lg:col-span-7">
+          <div className="auth-form-panel flex flex-col justify-between p-7 sm:p-10 xl:col-span-7">
             {success ? (
               <div className="flex flex-1 flex-col items-center justify-center py-6 text-center">
                 <div className="relative flex size-20 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 ring-8 ring-emerald-50/70">

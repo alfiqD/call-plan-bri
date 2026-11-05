@@ -105,6 +105,7 @@ function FollowUpFormModal({
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <p className="text-[11px] font-semibold text-slate-400">Target Nasabah</p>
             <p className="text-sm font-bold text-slate-900">{selectedCustomer.name}</p>
+            {selectedCustomer.picName && <p className="text-xs text-slate-600">PIC: {selectedCustomer.picName}</p>}
             <p className="text-xs text-slate-500">{selectedCustomer.phone} · {selectedCustomer.address}</p>
           </div>
         ) : (
@@ -121,7 +122,7 @@ function FollowUpFormModal({
               <option value="">-- Pilih Nasabah --</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.name} ({c.type}) — {c.phone}
+                  {c.name}{c.picName ? ` · PIC: ${c.picName}` : ''} — {c.phone}
                 </option>
               ))}
             </select>

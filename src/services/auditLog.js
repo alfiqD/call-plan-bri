@@ -22,6 +22,7 @@ export const AUDIT_ACTIONS = {
 
   // Field Visits
   CHECK_IN_VISIT: 'CHECK_IN_VISIT',
+  COMPLETE_VISIT_ADMINISTRATION: 'COMPLETE_VISIT_ADMINISTRATION',
   RESCHEDULE_VISIT: 'RESCHEDULE_VISIT',
   UNMET_VISIT: 'UNMET_VISIT',
 
@@ -420,7 +421,6 @@ function createSeedAuditLogs() {
       entityId: '2',
       details: {
         nama: 'Siti Rahmawati',
-        kategori: 'Prospek',
         noRekening: '••••••••4455',
       },
       createdAt: twoDaysAgo,

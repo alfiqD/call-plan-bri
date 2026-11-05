@@ -19,6 +19,7 @@ export function mapFollowUpFromDb(row) {
     id: String(row.id),
     customerId: String(row.nasabah_id),
     customerName: row.nasabahs?.nama || '',
+    customerPicName: row.nasabahs?.nama_pic || '',
     customerPhone: row.nasabahs?.no_hp || '',
     customerAddress: row.nasabahs?.alamat || '',
     appointmentId: row.jadwal_kunjungan_id ? String(row.jadwal_kunjungan_id) : null,
@@ -123,7 +124,7 @@ export async function fetchFollowUps(filterUser = null) {
       .from('follow_ups')
       .select(`
           *,
-          nasabahs:nasabah_id (nama, no_hp, alamat),
+          nasabahs:nasabah_id (nama, nama_pic, no_hp, alamat),
           profiles:rm_id (nama)
         `)
       .order('tanggal_follow_up', { ascending: true })
@@ -177,7 +178,7 @@ export async function saveFollowUp(followUpData, currentUser = null) {
         .eq('id', followUpData.id)
         .select(`
             *,
-            nasabahs:nasabah_id (nama, no_hp, alamat),
+            nasabahs:nasabah_id (nama, nama_pic, no_hp, alamat),
             profiles:rm_id (nama)
           `)
         .single()
@@ -189,7 +190,7 @@ export async function saveFollowUp(followUpData, currentUser = null) {
         }])
         .select(`
           *,
-          nasabahs:nasabah_id (nama, no_hp, alamat),
+          nasabahs:nasabah_id (nama, nama_pic, no_hp, alamat),
           profiles:rm_id (nama)
         `)
         .single()
@@ -262,7 +263,7 @@ export async function completeFollowUp(id, resultNotes = '', currentUser = null)
       .eq('id', id)
       .select(`
           *,
-          nasabahs:nasabah_id (nama, no_hp, alamat),
+          nasabahs:nasabah_id (nama, nama_pic, no_hp, alamat),
           profiles:rm_id (nama)
         `)
       .single()
@@ -316,7 +317,7 @@ export async function cancelFollowUp(id, currentUser = null) {
       .eq('id', id)
       .select(`
           *,
-          nasabahs:nasabah_id (nama, no_hp, alamat),
+          nasabahs:nasabah_id (nama, nama_pic, no_hp, alamat),
           profiles:rm_id (nama)
         `)
       .single()
