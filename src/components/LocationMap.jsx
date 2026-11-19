@@ -46,7 +46,7 @@ function LocationMap({
       center={center}
       zoom={15}
       scrollWheelZoom
-      style={{ height: `clamp(220px, 45vh, ${height})` }}
+      style={{ height: `clamp(240px, 48vh, ${height})` }}
       className={`w-full rounded-xl ${className}`}
     >
       <MapViewport center={center} />
@@ -56,7 +56,7 @@ function LocationMap({
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {position && (
-        <CircleMarker center={center} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#4f46e5', fillOpacity: 1 }}>
+        <CircleMarker center={center} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#00529b', fillOpacity: 1 }}>
           <Tooltip permanent direction="top">Lokasi nasabah</Tooltip>
         </CircleMarker>
       )}
@@ -66,7 +66,7 @@ function LocationMap({
         </CircleMarker>
       )}
       {routeCoordinates.length > 1 && (
-        <Polyline positions={routeCoordinates} pathOptions={{ color: '#4f46e5', weight: 5, opacity: 0.8 }} />
+        <Polyline positions={routeCoordinates} pathOptions={{ color: '#00529b', weight: 5, opacity: 0.85 }} />
       )}
     </MapContainer>
   )

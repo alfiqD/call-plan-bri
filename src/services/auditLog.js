@@ -214,8 +214,6 @@ export async function fetchAuditLogs({
   startDate = '',
   endDate = '',
 } = {}) {
-  let logs = []
-
   // Try fetching from Supabase if configured
   if (isSupabaseConfigured() && supabase) {
     try {
@@ -237,7 +235,7 @@ export async function fetchAuditLogs({
       const { data, count, error } = await query
 
       if (!error && data) {
-        logs = data.map((row) => ({
+        const logs = data.map((row) => ({
           id: String(row.id),
           actorId: row.actor_id,
           actorEmail: row.actor_email || row.metadata?.actor_email || '',

@@ -93,7 +93,7 @@ function MainWorkspace() {
       } catch (error) {
         console.error('Gagal memuat data Call Plan.', error)
         if (isActive) {
-          setBackendError(error instanceof Error ? error.message : 'Data Call Plan gagal dimuat.')
+          setBackendError(error instanceof Error ? error.message : 'Data e-VisitBRI gagal dimuat.')
         }
       } finally {
         if (isActive) setIsLoading(false)
@@ -240,30 +240,8 @@ function MainWorkspace() {
       urgentFollowUpCount={urgentFollowUpCount}
       notificationState={notificationState}
     >
-      {/* {!isConfigured && !hideNotice && (
-        <div className="mb-6 flex items-start justify-between gap-3 rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-xs leading-5 text-blue-900 shadow-sm">
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-blue-600" />
-            <div>
-              <p className="font-bold">Mode Mandiri Aktif (Laravel Tidak Diperlukan Lagi)</p>
-              <p className="mt-0.5 text-[11px] text-blue-800">
-                Aplikasi berjalan mandiri tanpa perlu menyalakan server Laravel. Untuk beralih ke database Supabase PostgreSQL & Auth online, isi <code className="rounded bg-blue-100 px-1 py-0.5 font-mono">VITE_SUPABASE_URL</code> dan <code className="rounded bg-blue-100 px-1 py-0.5 font-mono">VITE_SUPABASE_ANON_KEY</code> pada file <code className="font-mono">.env</code>.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setHideNotice(true)}
-            className="rounded-lg px-2 py-0.5 text-sm font-bold text-blue-500 hover:bg-blue-100"
-            aria-label="Tutup pemberitahuan"
-          >
-            ✕
-          </button>
-        </div>
-      )} */}
-
       {backendError ? (
-        <div className="mx-auto mt-10 max-w-xl rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+        <div className="mx-auto mt-10 max-w-xl rounded-xl border border-rose-200 bg-white p-6 text-center shadow-xs">
           <p className="text-sm font-bold text-slate-900">Koneksi Database Belum Tersedia</p>
           <p className="mt-2 text-xs leading-5 text-rose-700" role="alert">{backendError}</p>
           <button onClick={() => setReloadKey((current) => current + 1)} className="button-primary mx-auto mt-4">
@@ -272,7 +250,7 @@ function MainWorkspace() {
         </div>
       ) : isLoading || !workspace ? (
         <div className="flex min-h-80 items-center justify-center text-sm text-slate-500">
-          <LoaderCircle className="mr-2 size-5 animate-spin" />Memuat data Call Plan...
+          <LoaderCircle className="mr-2 size-5 animate-spin" />Memuat data e-VisitBRI...
         </div>
       ) : (
         <Suspense fallback={<div className="flex min-h-80 items-center justify-center text-sm text-slate-500"><LoaderCircle className="mr-2 size-5 animate-spin" />Memuat modul...</div>}>
@@ -316,10 +294,10 @@ function AppContent() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#002D62] text-white">
+      <div className="flex min-h-screen items-center justify-center bg-[#002347] text-white">
         <div className="text-center">
           <LoaderCircle className="mx-auto size-8 animate-spin text-[#f37021]" />
-          <p className="mt-3 text-sm font-semibold tracking-wide">Memuat Sistem Call Plan BRI...</p>
+          <p className="mt-3 text-sm font-semibold tracking-wide">Memuat e-VisitBRI...</p>
         </div>
       </div>
     )

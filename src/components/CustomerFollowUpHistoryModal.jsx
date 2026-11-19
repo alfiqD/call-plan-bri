@@ -16,23 +16,23 @@ function CustomerFollowUpHistoryModal({
   return (
     <Modal
       title={`Riwayat Follow-up: ${customer.name}`}
-      description="Daftar pengingat dan catatan tindak lanjut untuk nasabah ini."
+      description="Daftar pengingat dan catatan tindak lanjut nasabah."
       onClose={onClose}
     >
       <div className="space-y-4">
         {/* Customer Header Info */}
-        <div className="flex flex-col justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-900">{customer.name}</span>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1 hover:text-indigo-600">
+              <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1 text-[#00529b] hover:underline">
                 <Phone size={12} /> {customer.phone}
               </a>
               {' · '}{customer.address}
             </p>
-            {customer.picName && <p className="mt-1 text-[11px] text-slate-500">PIC: {customer.picName}</p>}
+            {customer.picName && <p className="mt-1 text-xs text-slate-500">PIC: {customer.picName}</p>}
           </div>
 
           <button
@@ -41,7 +41,7 @@ function CustomerFollowUpHistoryModal({
               onClose()
               onCreateFollowUp(customer)
             }}
-            className="button-primary inline-flex items-center gap-1.5 py-1.5 text-xs whitespace-nowrap self-start sm:self-auto"
+            className="button-orange inline-flex items-center gap-1.5 py-1.5 text-xs whitespace-nowrap self-start sm:self-auto"
           >
             <Plus size={14} /> Buat Tindak Lanjut
           </button>
@@ -50,11 +50,11 @@ function CustomerFollowUpHistoryModal({
         {/* Timeline of Follow-ups */}
         <div className="max-h-[380px] overflow-y-auto space-y-3 pr-1">
           {customerFollowUps.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 p-8 text-center text-slate-400">
-              <CalendarClock className="mx-auto size-9 opacity-40 mb-2" />
-              <p className="text-xs font-semibold text-slate-600">Belum ada riwayat follow-up untuk nasabah ini</p>
+            <div className="rounded-xl border border-dashed border-slate-200 p-8 text-center text-slate-400">
+              <CalendarClock className="mx-auto size-8 text-slate-300 mb-1" />
+              <p className="text-xs font-semibold text-slate-700">Belum ada riwayat follow-up</p>
               <p className="text-[11px] text-slate-400 mt-1">
-                Jadwalkan panggilan atau janji temu pertama untuk menindaklanjuti nasabah.
+                Jadwalkan komunikasi pertama untuk menindaklanjuti nasabah ini.
               </p>
             </div>
           ) : (
@@ -64,7 +64,7 @@ function CustomerFollowUpHistoryModal({
               return (
                 <div
                   key={item.id}
-                  className={`rounded-2xl border p-4 transition ${
+                  className={`rounded-xl border p-3.5 transition ${
                     isCompleted
                       ? 'border-emerald-200 bg-emerald-50/30'
                       : isCanceled
@@ -138,7 +138,7 @@ function CustomerFollowUpHistoryModal({
         </div>
 
         <div className="flex justify-end border-t border-slate-100 pt-3">
-          <button type="button" onClick={onClose} className="button-secondary text-xs">
+          <button type="button" onClick={onClose} className="button-secondary !min-h-[44px] w-full sm:w-auto text-xs">
             Tutup
           </button>
         </div>

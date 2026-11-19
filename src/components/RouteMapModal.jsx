@@ -80,19 +80,19 @@ function RouteMapModal({ customer, onClose }) {
 
   return (
     <Modal
-      title={`Peta kunjungan · ${customer.name}`}
-      description="Peta dan rute ditampilkan di dalam Call Plan."
+      title={`Rute Kunjungan · ${customer.name}`}
+      description="Peta navigasi dan rute perjalanan menuju lokasi nasabah."
       onClose={onClose}
       wide
     >
       <div className="space-y-4">
-        <div className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
-          <MapPin size={15} className="mt-0.5 shrink-0 text-indigo-600" />
+        <div className="flex items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 text-xs leading-5 text-slate-600">
+          <MapPin size={16} className="mt-0.5 shrink-0 text-[#00529b]" />
           <div>
             <p className="font-semibold text-slate-800">{customer.address}</p>
             {hasCoordinates
-              ? <p className="mt-1 text-[10px] text-slate-500">Titik nasabah tersimpan pada peta.</p>
-              : <p className="mt-1 text-[10px] text-amber-700">Pin belum tersedia. Ubah data nasabah lalu pilih titik lokasinya pada peta.</p>}
+              ? <p className="mt-0.5 text-[11px] text-emerald-700 font-medium">Titik koordinat nasabah terverifikasi pada peta.</p>
+              : <p className="mt-0.5 text-[11px] text-amber-700 font-medium">Pin belum tersedia. Ubah data nasabah lalu tandai titik lokasinya pada peta.</p>}
           </div>
         </div>
         <LocationMap
@@ -102,28 +102,44 @@ function RouteMapModal({ customer, onClose }) {
         />
         {route && <p className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">Rute berkendara {formatDistance(route.distance)} · {formatDuration(route.duration)}</p>}
         {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
-        <p className="text-[10px] leading-4 text-slate-400">Peta memakai OpenStreetMap; rute berkendara meminta layanan OSRM publik. Untuk prototipe ini, gunakan data demo—jangan kirim lokasi nasabah nyata.</p>
-        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-          <a
-            href={mapLinks.openStreetMap}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="button-secondary"
+        <p className="text-[11px] leading-4 text-slate-500">Estimasi rute berkendara dihitung berdasarkan posisi perangkat saat ini.</p>
+        <div className="sticky bottom-0 -mx-3.5 -mb-3.5 flex flex-col gap-2 border-t border-slate-100 bg-white px-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:mb-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4">
+          <div className="flex flex-wrap gap-1.5 sm:gap-2">
+            <a
+              href={mapLinks.openStreetMap}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button-secondary !min-h-[40px] flex-1 text-xs sm:flex-none"
+            >
+              <ExternalLink size={13} />OpenStreetMap
+            </a>
+            <a
+              href={googleMapsPlaceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button-secondary !min-h-[40px] flex-1 text-xs sm:flex-none"
+            >
+              <ExternalLink size={13} />Google Maps
+            </a>
+            {hasCoordinates && (
+              <a
+                href={mapLinks.streetView}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="button-secondary !min-h-[40px] flex-1 text-xs sm:flex-none"
+              >
+                <ExternalLink size={13} />Street View
+              </a>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={createRoute}
+            disabled={!hasCoordinates || isLoading}
+            className="button-orange !min-h-[44px] w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            <ExternalLink size={14} />OpenStreetMap
-          </a>
-          <a
-            href={googleMapsPlaceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="button-secondary"
-          >
-            <ExternalLink size={14} />Lihat di Google Maps
-          </a>
-          {hasCoordinates && <a href={mapLinks.streetView} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Street View</a>}
-          <button type="button" onClick={createRoute} disabled={!hasCoordinates || isLoading} className="button-primary disabled:cursor-not-allowed disabled:opacity-50">
             {isLoading ? <LoaderCircle size={14} className="animate-spin" /> : <><LocateFixed size={14} /><Route size={14} /></>}
-            {isLoading ? 'Membuat rute...' : 'Buat rute dari lokasi saya'}
+            {isLoading ? 'Menghitung rute...' : 'Buat Rute dari Lokasi Saya'}
           </button>
         </div>
       </div>

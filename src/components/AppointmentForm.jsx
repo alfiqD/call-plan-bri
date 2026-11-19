@@ -43,47 +43,57 @@ function AppointmentForm({ customers, appointment, date, onClose, onSubmit }) {
   }
 
   return (
-    <Modal title={appointment ? 'Ubah jadwal kunjungan' : 'Buat jadwal kunjungan'} description="Rencanakan agenda dan lokasi pertemuan nasabah." onClose={onClose}>
+    <Modal
+      title={appointment ? 'Edit Jadwal Kunjungan' : 'Buat Jadwal Kunjungan'}
+      description="Rencanakan tanggal, waktu, dan tujuan kunjungan nasabah."
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="space-y-4">
         {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700" role="alert">{error}</p>}
-        <label className="form-label">Nasabah
+        <label className="form-label">
+          Pilih Nasabah
           <select name="customerId" value={form.customerId} onChange={update} required className="form-control">
-            <option value="">Pilih nasabah</option>
+            <option value="">Pilih nasabah tujuan</option>
             {customers.map((customer) => (
               <option key={customer.id} value={customer.id}>
-                {customer.name}{customer.picName ? ` · PIC: ${customer.picName}` : ''} · {customer.phone} · {customer.address}
+                {customer.name}{customer.picName ? ` · PIC: ${customer.picName}` : ''} · {customer.phone}
               </option>
             ))}
           </select>
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="form-label">Tanggal kunjungan
+          <label className="form-label">
+            Tanggal Kunjungan
             <input type="date" name="date" value={form.date} onChange={update} required className="form-control" />
           </label>
-          <label className="form-label">Jam
+          <label className="form-label">
+            Waktu Kunjungan
             <input type="time" name="time" value={form.time} onChange={update} required className="form-control" />
           </label>
         </div>
-        <label className="form-label">Tujuan kunjungan
-          <select name="purpose" value={form.purpose} onChange={update} className="form-control">
-            <option>Penagihan</option>
-            <option>Penawaran Top-Up</option>
-            <option>Survei Jaminan</option>
-            <option>Kunjungan Prospek</option>
-            <option>Follow-up</option>
-            <option>Lainnya</option>
-          </select>
-        </label>
-        <label className="form-label">Prioritas rute
-          <select name="priority" value={form.priority} onChange={update} className="form-control">
-            <option>Normal</option>
-            <option>Tinggi</option>
-          </select>
-        </label>
-        <p className="rounded-lg border border-blue-100 bg-blue-50/70 px-3 py-2 text-[11px] leading-5 text-[#00529b]">Jadwal dan lokasi hanya untuk perencanaan kunjungan, tidak mencatat target uang atau nominal kredit.</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="form-label">
+            Tujuan Kunjungan
+            <select name="purpose" value={form.purpose} onChange={update} className="form-control">
+              <option>Penagihan</option>
+              <option>Penawaran Top-Up</option>
+              <option>Survei Jaminan</option>
+              <option>Kunjungan Prospek</option>
+              <option>Follow-up</option>
+              <option>Lainnya</option>
+            </select>
+          </label>
+          <label className="form-label">
+            Prioritas Rute
+            <select name="priority" value={form.priority} onChange={update} className="form-control">
+              <option>Normal</option>
+              <option>Tinggi</option>
+            </select>
+          </label>
+        </div>
         <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
           <button type="button" onClick={onClose} className="button-secondary !min-h-[44px] w-full sm:w-auto">Batal</button>
-          <button type="submit" className="button-orange !min-h-[44px] w-full sm:w-auto">{appointment ? 'Simpan perubahan' : 'Simpan jadwal'}</button>
+          <button type="submit" className="button-orange !min-h-[44px] w-full sm:w-auto">{appointment ? 'Simpan Perubahan' : 'Simpan Jadwal'}</button>
         </div>
       </form>
     </Modal>

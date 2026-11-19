@@ -19,12 +19,13 @@ import LogoutConfirmationModal from './LogoutConfirmationModal'
 import { useAuth } from '../context/useAuth'
 
 const pageInfo = {
-  dashboard: { title: 'Dashboard Monitoring', subtitle: 'Ringkasan jadwal dan aktivitas hari ini' },
-  customers: { title: 'Data Nasabah', subtitle: 'Daftar debitur dan prospek KCP Iskandar Palembang' },
-  schedule: { title: 'Jadwal Kunjungan', subtitle: 'Agenda dan rute kunjungan Relationship Manager' },
-  'follow-up': { title: 'Follow-up Reminder', subtitle: 'Pengingat dan riwayat tindak lanjut nasabah' },
-  reports: { title: 'Status Kunjungan', subtitle: 'Rekap status hasil kunjungan lapangan' },
-  'admin-users': { title: 'Kelola Pengguna', subtitle: 'Administrasi dan persetujuan akun pengguna' },
+  dashboard: { title: 'Dashboard', subtitle: 'Ringkasan jadwal dan aktivitas' },
+  customers: { title: 'Data Nasabah', subtitle: 'Daftar debitur dan prospek' },
+  schedule: { title: 'Jadwal Kunjungan', subtitle: 'Agenda dan rute kunjungan' },
+  'follow-up': { title: 'Follow-up', subtitle: 'Pengingat dan riwayat tindak lanjut' },
+  reports: { title: 'Status Kunjungan', subtitle: 'Rekapitulasi status hasil kunjungan' },
+  'admin-users': { title: 'Kelola Pengguna', subtitle: 'Persetujuan dan peran akun pengguna' },
+  'audit-log': { title: 'Audit Log', subtitle: 'Rekam jejak aktivitas sistem' },
 }
 
 function AppShell({
@@ -48,7 +49,7 @@ function AppShell({
     }
   })
   const dropdownRef = useRef(null)
-  const info = pageInfo[activePage] || { title: 'CallPlan', subtitle: 'Aplikasi Monitoring Kunjungan' }
+  const info = pageInfo[activePage] || { title: 'e-VisitBRI', subtitle: 'Sistem Monitoring Kunjungan Nasabah' }
 
   const todayDateString = useMemo(() => {
     return new Intl.DateTimeFormat('id-ID', {
@@ -95,7 +96,7 @@ function AppShell({
   }, [])
 
   const displayName = profile?.nama || user?.user_metadata?.full_name || 'Petugas RM'
-  const displayEmail = profile?.email || user?.email || 'rm@bri.co.id'
+  const displayEmail = profile?.email || user?.email || 'pegawai@bri.co.id'
   const initials = displayName
     .split(' ')
     .filter(Boolean)
@@ -106,12 +107,12 @@ function AppShell({
   const roleLabel = role === 'admin' ? 'Admin' : 'RM'
   const roleBadgeStyle = role === 'admin'
     ? 'bg-amber-50 text-amber-700 border-amber-200'
-    : 'bg-blue-50 text-blue-700 border-blue-200'
+    : 'bg-blue-50 text-[#00529b] border-blue-200'
 
   return (
     <div className="workspace-shell min-h-screen text-slate-800 antialiased">
       {/* Desktop Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] lg:block">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[220px] lg:block">
         <Sidebar
           activePage={activePage}
           onNavigate={navigate}
@@ -129,7 +130,7 @@ function AppShell({
             onClick={() => setMobileMenuOpen(false)}
           />
           <div
-            className="relative h-full w-[280px] max-w-[88vw] shadow-xl"
+            className="relative h-full w-[260px] max-w-[85vw] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]"
             role="dialog"
             aria-modal="true"
             aria-label="Navigasi utama"
@@ -144,7 +145,7 @@ function AppShell({
               }}
             />
             <button
-              className="absolute right-3 top-3.5 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100"
+              className="absolute right-3 top-3.5 rounded-lg p-1.5 text-white/70 transition hover:bg-white/10 hover:text-white"
               onClick={() => setMobileMenuOpen(false)}
               aria-label="Tutup navigasi"
             >
@@ -155,49 +156,49 @@ function AppShell({
       )}
 
       {/* Main Body */}
-      <div className="lg:pl-[240px]">
-        {/* Top Header */}
-        <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b border-slate-200 px-3 sm:h-16 sm:px-6 xl:px-8">
+      <div className="lg:pl-[220px]">
+        {/* ── Top Header ──────────────────────────────────────────── */}
+        <header className="workspace-header sticky top-0 z-20 flex h-14 items-center justify-between gap-3 border-b border-slate-200/70 bg-white/95 px-4 shadow-[0_1px_2px_rgba(15,23,42,0.03)] backdrop-blur-md sm:px-6 xl:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <button
-              className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              className="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:bg-slate-100 lg:hidden"
               onClick={() => setMobileMenuOpen(true)}
               aria-label="Buka navigasi"
             >
-              <Menu size={20} />
+              <Menu size={18} />
             </button>
             <div className="min-w-0">
-              <h1 className="truncate text-base font-bold text-slate-900 sm:text-lg">
+              <span className="block truncate text-sm font-bold tracking-tight text-slate-900 sm:text-[15px]">
                 {info.title}
-              </h1>
-              <p className="hidden text-[11px] text-slate-500 sm:block">
+              </span>
+              <span className="hidden truncate text-[10.5px] font-medium text-slate-400 sm:block">
                 {info.subtitle}
-              </p>
+              </span>
             </div>
           </div>
 
-          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             {/* Current Date Display */}
-            <div className="hidden items-center gap-1.5 text-xs text-slate-500 md:flex">
-              <CalendarDays size={14} className="text-slate-400" />
-              <span>{todayDateString}</span>
+            <div className="hidden items-center gap-1.5 rounded-md border border-slate-200/70 bg-slate-50/60 px-2 py-1 text-[11px] font-medium text-slate-500 md:flex">
+              <CalendarDays size={12} className="text-[#00529b]" />
+              <span className="tabular-nums">{todayDateString}</span>
             </div>
 
-            <div className="hidden h-5 w-px bg-slate-200 md:block" />
+            <div className="hidden h-4 w-px bg-slate-200 md:block" />
 
             {/* Quick Action: Buat Jadwal */}
-            {activePage !== 'schedule' && (
+            {!['schedule', 'dashboard'].includes(activePage) && (
               <button
                 type="button"
                 onClick={() => navigate('schedule')}
-                className="hidden items-center gap-1.5 rounded-lg bg-[#f37021] px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-[#df5c12] transition sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-lg bg-[#00529b] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px sm:inline-flex"
               >
                 <CalendarPlus size={14} />
                 <span>Buat Jadwal</span>
               </button>
             )}
 
-            {/* Notification Bell (Web Notifications & In-App Reminders) */}
+            {/* Notification Bell */}
             {notificationState && (
               <NotificationBell
                 permission={notificationState.permission}
@@ -216,37 +217,45 @@ function AppShell({
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white py-1 pl-1.5 pr-2.5 text-left hover:bg-slate-50 transition"
+                className="flex items-center gap-2 rounded-lg border border-slate-200/80 bg-white py-1 pl-1.5 pr-2 text-left shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/25 hover:bg-[#f9fbfe]"
                 aria-expanded={userDropdownOpen}
                 aria-haspopup="true"
               >
-                <span className="flex size-7 items-center justify-center rounded-full bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
+                <span className="flex size-7 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
                   {initials}
                 </span>
                 <span className="hidden sm:block">
-                  <span className="block max-w-[120px] truncate text-xs font-semibold text-slate-800">
+                  <span className="block max-w-[120px] truncate text-[12px] font-semibold text-slate-800">
                     {displayName}
                   </span>
                 </span>
-                <span className={`hidden items-center rounded px-1.5 py-0.5 text-[10px] font-bold border min-[400px]:inline-flex ${roleBadgeStyle}`}>
+                <span className={`hidden items-center rounded border px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide min-[400px]:inline-flex ${roleBadgeStyle}`}>
                   {roleLabel}
                 </span>
-                <ChevronDown className="hidden text-slate-400 min-[400px]:block" size={13} />
+                <ChevronDown
+                  className={`hidden text-slate-400 transition-transform min-[400px]:block ${userDropdownOpen ? 'rotate-180' : ''}`}
+                  size={13}
+                />
               </button>
 
               {userDropdownOpen && (
-                <div className="absolute right-0 top-11 z-50 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
-                  <div className="border-b border-slate-100 px-3 py-2">
-                    <p className="truncate text-xs font-bold text-slate-900">{displayName}</p>
-                    <p className="truncate text-[11px] text-slate-500">{displayEmail}</p>
-                    <div className="mt-1.5 flex items-center gap-1.5 text-[10px] text-slate-500">
-                      <span className="size-1.5 rounded-full bg-emerald-500" />
-                      <span>Bank BRI KCP Iskandar Palembang</span>
+                <div className="absolute right-0 top-11 z-50 w-64 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_10px_40px_-10px_rgba(15,23,42,0.25),0_2px_6px_rgba(15,23,42,0.06)]">
+                  <div className="border-b border-slate-100 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-3.5 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#00529b]/15 bg-[#eaf3fb] text-xs font-bold text-[#00529b]">
+                        {initials}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[12.5px] font-bold text-slate-900">{displayName}</p>
+                        <p className="truncate font-mono text-[10.5px] text-slate-500">{displayEmail}</p>
+                      </div>
                     </div>
+                    <span className={`mt-2 inline-flex items-center rounded border px-1.5 py-0.5 text-[9.5px] font-bold uppercase tracking-wide ${roleBadgeStyle}`}>
+                      {role === 'admin' ? 'Administrator' : 'Relationship Manager'}
+                    </span>
                   </div>
 
-                  <div className="pt-1">
-                    {/* Ringkasan Pengaturan Notifikasi di Menu Profil */}
+                  <div className="p-1.5">
                     {notificationState && (
                       <button
                         type="button"
@@ -254,23 +263,18 @@ function AppShell({
                           setUserDropdownOpen(false)
                           setSettingsModalOpen(true)
                         }}
-                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-[#00529b]"
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[12px] font-medium text-slate-700 transition hover:bg-[#f7fbff] hover:text-[#00529b]"
                       >
                         <span className="flex items-center gap-2">
-                          <Bell size={14} /> Pengaturan Notifikasi
+                          <Bell size={14} /> Notifikasi
                         </span>
-                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                          notificationState.permission === 'granted'
-                            ? 'bg-emerald-50 text-emerald-700'
-                            : notificationState.permission === 'denied'
-                            ? 'bg-rose-50 text-rose-700'
-                            : 'bg-amber-50 text-amber-700'
-                        }`}>
-                          {notificationState.permission === 'granted'
-                            ? 'Aktif'
-                            : notificationState.permission === 'denied'
-                            ? 'Diblokir'
-                            : 'Belum Izin'}
+                        <span className={`rounded border px-1.5 py-0.5 text-[9.5px] font-bold ${notificationState.permission === 'granted'
+                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                          : notificationState.permission === 'denied'
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                            : 'border-amber-200 bg-amber-50 text-amber-700'
+                          }`}>
+                          {notificationState.permission === 'granted' ? 'Aktif' : 'Nonaktif'}
                         </span>
                       </button>
                     )}
@@ -282,20 +286,23 @@ function AppShell({
                           navigate('admin-users')
                           setUserDropdownOpen(false)
                         }}
-                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50 hover:text-[#00529b]"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-medium text-slate-700 transition hover:bg-[#f7fbff] hover:text-[#00529b]"
                       >
                         <Shield size={14} /> Kelola Pengguna
                       </button>
                     )}
+                  </div>
+
+                  <div className="border-t border-slate-100 p-1.5">
                     <button
                       type="button"
                       onClick={() => {
                         setUserDropdownOpen(false)
                         setLogoutModalOpen(true)
                       }}
-                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50 transition"
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[12px] font-semibold text-rose-600 transition hover:bg-rose-50"
                     >
-                      <LogOut size={14} /> Keluar dari Akun
+                      <LogOut size={14} /> Keluar
                     </button>
                   </div>
                 </div>
@@ -304,25 +311,27 @@ function AppShell({
           </div>
         </header>
 
-        {/* In-App Permission Prompt Banner (Non-intrusive, dismissible, shown only when permission === 'default') */}
+        {/* ── In-App Permission Prompt Banner ─────────────────────── */}
         {role !== 'admin' && notificationState?.permission === 'default' && !dismissedBanner && (
-          <div className="border-b border-amber-200 bg-amber-50/90 px-4 py-2.5 text-xs text-amber-900">
-            <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-3 px-0 sm:flex-row sm:items-center sm:px-6 xl:px-8">
-              <div className="flex items-start gap-2">
-                <Bell size={15} className="shrink-0 text-amber-700" />
-                <span>
-                  <strong>Aktifkan Notifikasi Pengingat di Laptop:</strong> Dapatkan pemberitahuan tepat waktu untuk jadwal kunjungan dan follow-up nasabah hari ini.
+          <div className="border-b border-amber-200/70 bg-[linear-gradient(90deg,#fffbeb_0%,#fef3c7_100%)] px-4 py-2 text-xs text-amber-900">
+            <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-md border border-amber-200/70 bg-amber-100/70 text-amber-700">
+                  <Bell size={12} strokeWidth={2.2} />
+                </span>
+                <span className="truncate font-medium">
+                  Aktifkan notifikasi browser untuk menerima pengingat jadwal dan follow-up.
                 </span>
               </div>
-              <div className="flex w-full items-center gap-2 sm:w-auto sm:shrink-0">
+              <div className="flex shrink-0 items-center gap-2">
                 <button
                   type="button"
                   onClick={async () => {
                     await notificationState.requestPermission()
                   }}
-                  className="rounded-lg bg-[#00529b] px-3 py-1 text-xs font-bold text-white hover:bg-[#003d74] transition"
+                  className="rounded-md bg-[#00529b] px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px"
                 >
-                  Aktifkan Sekarang
+                  Aktifkan
                 </button>
                 <button
                   type="button"
@@ -332,8 +341,8 @@ function AppShell({
                       sessionStorage.setItem('cp-dismiss-notif-banner', '1')
                     } catch { /* ignore */ }
                   }}
-                  className="rounded p-1 text-amber-700 hover:bg-amber-100"
-                  aria-label="Tutup saran notifikasi"
+                  className="rounded-md p-1 text-amber-700 transition hover:bg-amber-100"
+                  aria-label="Tutup"
                 >
                   <X size={14} />
                 </button>
@@ -342,27 +351,27 @@ function AppShell({
           </div>
         )}
 
-        {/* Content Area */}
-        <main className={`workspace-main mx-auto min-w-0 max-w-7xl px-3 pt-4 sm:px-6 sm:pt-6 xl:px-8 ${
-          role === 'rm'
-            ? 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-6'
-            : 'pb-4 sm:pb-6'
-        }`}>
+        {/* ── Content Area ──────────────────────────────────────────── */}
+        <main className={`workspace-main mx-auto min-w-0 max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6 xl:px-8 ${role === 'rm'
+          ? 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8'
+          : 'pb-8'
+          }`}>
           {children}
 
           {/* Clean Enterprise Footer */}
-          <footer className="mt-12 flex flex-col items-center justify-between gap-2 border-t border-slate-200 py-6 text-xs text-slate-400 sm:flex-row">
-            <span>© {new Date().getFullYear()} CallPlan · Bank BRI KCP Iskandar Palembang</span>
-            <span>Sistem Perencanaan & Monitoring Kunjungan Nasabah</span>
+          <footer className="mt-12 flex flex-col items-center justify-between gap-2 border-t border-slate-200 py-6 text-[11px] text-slate-400 sm:flex-row">
+            <span className="tabular-nums">© {new Date().getFullYear()} e-VisitBRI · Bank BRI KCP Iskandar Palembang</span>
+            <span>Sistem Monitoring Kunjungan Nasabah</span>
           </footer>
         </main>
 
+        {/* ── Bottom Navigation (RM) ─────────────────────────────────── */}
         {role === 'rm' && (
           <nav
             aria-label="Navigasi bawah"
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_-4px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:hidden"
           >
-            <div className="grid h-16 grid-cols-5">
+            <div className="grid h-14 grid-cols-5">
               {[
                 { label: 'Home', icon: Home, active: activePage === 'dashboard' && !mobileMapActive, onClick: () => { navigate('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
                 { label: 'Peta', icon: Map, active: activePage === 'dashboard' && mobileMapActive, onClick: navigateToMap },
@@ -377,14 +386,15 @@ function AppShell({
                   aria-label={label}
                   aria-current={active ? 'page' : undefined}
                   aria-expanded={label === 'Menu' ? mobileMenuOpen : undefined}
-                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10px] font-semibold transition-colors ${
-                    active
-                      ? 'bg-[#eaf3fb] text-[#00529b]'
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                  }`}
+                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10px] font-semibold transition-colors ${active
+                    ? 'text-[#00529b]'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                    }`}
                 >
-                  {active && <span className="absolute inset-x-1/4 top-0 h-0.5 rounded-full bg-[#00529b]" />}
-                  <Icon size={20} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
+                  {active && (
+                    <span className="absolute inset-x-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-[#00529b] shadow-[0_1px_4px_rgba(0,82,155,0.4)]" />
+                  )}
+                  <Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" className={active ? 'text-[#00529b]' : ''} />
                   <span className="truncate">{label}</span>
                 </button>
               ))}
@@ -392,7 +402,7 @@ function AppShell({
           </nav>
         )}
 
-        {/* Notification Settings Modal */}
+        {/* ── Notification Settings Modal ───────────────────────────── */}
         {notificationState && (
           <NotificationSettingsModal
             isOpen={settingsModalOpen}
@@ -405,7 +415,7 @@ function AppShell({
           />
         )}
 
-        {/* Bank BRI Logout Confirmation Modal */}
+        {/* ── Logout Confirmation Modal ─────────────────────────────── */}
         <LogoutConfirmationModal
           isOpen={logoutModalOpen}
           onClose={() => setLogoutModalOpen(false)}

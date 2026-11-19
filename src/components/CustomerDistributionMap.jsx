@@ -1,18 +1,15 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   Compass,
   ExternalLink,
-  Filter,
-  Layers,
   MapPin,
   Maximize2,
   Phone,
   RefreshCw,
   Search,
-  User,
   X,
 } from 'lucide-react'
 
@@ -203,7 +200,7 @@ function CustomerDistributionMap({
       return { fillColor: '#10b981', color: '#ffffff', label: 'Sudah Dikunjungi' }
     }
     if (marker.visitStatus === 'Execute') {
-      return { fillColor: '#6366f1', color: '#ffffff', label: 'Tahap Administrasi' }
+      return { fillColor: '#00529b', color: '#ffffff', label: 'Tahap Administrasi' }
     }
     if (marker.visitStatus === 'Reschedule') {
       return { fillColor: '#f59e0b', color: '#ffffff', label: 'Reschedule' }
@@ -211,7 +208,7 @@ function CustomerDistributionMap({
     if (marker.visitStatus === 'Tidak ditemui') {
       return { fillColor: '#ef4444', color: '#ffffff', label: 'Tidak Ditemui' }
     }
-    return { fillColor: '#00529b', color: '#ffffff', label: 'Nasabah' }
+    return { fillColor: '#64748b', color: '#ffffff', label: 'Nasabah' }
   }
 
   return (
@@ -233,7 +230,7 @@ function CustomerDistributionMap({
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Visualisasi titik geografis nasabah Bank BRI KCP Iskandar Palembang
+                Sebaran titik lokasi nasabah pada peta operasional
               </p>
             </div>
           </div>
@@ -244,7 +241,7 @@ function CustomerDistributionMap({
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
+                className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition shadow-2xs"
                 title="Tampilkan kembali seluruh marker"
               >
                 <RefreshCw size={12} className="text-[#00529b]" />
@@ -254,7 +251,7 @@ function CustomerDistributionMap({
             <button
               type="button"
               onClick={() => setResetCount((c) => c + 1)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition shadow-2xs"
+              className="inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition shadow-2xs"
               title="Pusatkan kembali peta ke seluruh marker"
             >
               <Maximize2 size={12} />
@@ -266,14 +263,14 @@ function CustomerDistributionMap({
         {/* Filter Controls Row */}
         <div className="mt-3.5 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
           {/* Search */}
-          <div className="relative col-span-2 sm:col-span-1">
-            <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
+          <div className="relative col-span-1 min-[400px]:col-span-2 sm:col-span-1">
+            <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="Cari nama / alamat..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-8 pr-2.5 text-xs text-slate-800 focus:border-[#00529b] focus:outline-none"
+              className="w-full min-h-[38px] rounded-lg border border-slate-200 bg-white py-1.5 pl-9 pr-2.5 text-xs text-slate-800 focus:border-[#00529b] focus:outline-none"
             />
           </div>
 
@@ -282,7 +279,7 @@ function CustomerDistributionMap({
             <select
               value={selectedStatusKunjungan}
               onChange={(e) => setSelectedStatusKunjungan(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
+              className="w-full min-h-[38px] rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
             >
               <option value="Semua">Semua Status Kunjungan</option>
               <option value="Execute">Execute (Tahap Administrasi)</option>
@@ -299,7 +296,7 @@ function CustomerDistributionMap({
             <select
               value={selectedWilayah}
               onChange={(e) => setSelectedWilayah(e.target.value)}
-              className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
+              className="w-full min-h-[38px] rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs text-slate-700 focus:border-[#00529b] focus:outline-none"
             >
               <option value="Semua">Semua Wilayah</option>
               {wilayahOptions.map((w) => (
@@ -316,7 +313,7 @@ function CustomerDistributionMap({
               <select
                 value={selectedRmId}
                 onChange={(e) => setSelectedRmId(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-xs font-semibold text-[#00529b] focus:border-[#00529b] focus:outline-none"
+                className="w-full min-h-[38px] rounded-lg border border-slate-200 bg-white py-1.5 px-2.5 text-xs font-semibold text-[#00529b] focus:border-[#00529b] focus:outline-none"
               >
                 <option value="Semua">Semua Petugas RM</option>
                 {rmOptions.map((rm) => (
@@ -327,7 +324,7 @@ function CustomerDistributionMap({
               </select>
             </div>
           ) : (
-            <div className="flex items-center px-2 py-1.5 text-[11px] font-semibold text-slate-500 bg-slate-100 rounded-lg">
+            <div className="flex min-h-[38px] items-center px-3 py-1.5 text-[11px] font-semibold text-slate-500 bg-slate-100 rounded-lg">
               <span className="truncate">👤 Nasabah Kelolaan Saya</span>
             </div>
           )}
@@ -335,7 +332,7 @@ function CustomerDistributionMap({
       </div>
 
       {/* Map Canvas */}
-      <div className="relative w-full" style={{ height: `clamp(280px, 55vh, ${height})` }}>
+      <div className="relative w-full" style={{ height: `clamp(320px, 52vh, ${height})` }}>
         {allValidMarkers.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center p-6 text-center bg-slate-50">
             <MapPin size={32} className="text-slate-300 mb-2" />
@@ -431,7 +428,7 @@ function CustomerDistributionMap({
                         <button
                           type="button"
                           onClick={() => onNavigate?.('customers')}
-                          className="flex-1 rounded-lg bg-[#00529b] py-1.5 text-center text-[11px] font-semibold text-white hover:bg-[#003d74] transition"
+                          className="flex-1 min-h-[38px] rounded-lg bg-[#00529b] py-2 text-center text-xs font-semibold text-white hover:bg-[#003d74] transition"
                         >
                           Detail Nasabah
                         </button>
@@ -439,10 +436,10 @@ function CustomerDistributionMap({
                           href={`https://www.google.com/maps/search/?api=1&query=${marker.lat},${marker.lng}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition"
+                          className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition"
                           title="Buka rute di Google Maps"
                         >
-                          <ExternalLink size={13} />
+                          <ExternalLink size={15} />
                         </a>
                       </div>
                     </div>
@@ -460,15 +457,15 @@ function CustomerDistributionMap({
           <div className="flex flex-wrap items-center gap-4 text-[11px]">
             <span className="font-semibold text-slate-700">Legenda Pin:</span>
             <div className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-[#00529b] ring-1 ring-white" />
+              <span className="size-2.5 rounded-full bg-[#64748b] ring-1 ring-white" />
               <span>Nasabah</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="size-2.5 rounded-full bg-[#10b981] ring-1 ring-white" />
-              <span>Selesai (Dikunjungi)</span>
+              <span>Selesai</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="size-2.5 rounded-full bg-[#6366f1] ring-1 ring-white" />
+              <span className="size-2.5 rounded-full bg-[#00529b] ring-1 ring-white" />
               <span>Execute (Administrasi)</span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -480,8 +477,8 @@ function CustomerDistributionMap({
               <span>Tidak Ditemui</span>
             </div>
           </div>
-          <p className="text-[10px] text-slate-400">
-            Klik penanda untuk melihat profil nasabah dan membuka navigasi.
+          <p className="text-[11px] text-slate-400">
+            Klik penanda untuk melihat ringkasan profil nasabah.
           </p>
         </div>
       </div>

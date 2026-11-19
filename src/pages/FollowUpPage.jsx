@@ -34,6 +34,46 @@ const typeIcons = {
   Lainnya: CalendarClock,
 }
 
+const TONE = {
+  blue: { icon: 'text-[#00529b]', accent: '#00529b', value: 'text-slate-900' },
+  emerald: { icon: 'text-emerald-600', accent: '#059669', value: 'text-emerald-700' },
+  amber: { icon: 'text-amber-600', accent: '#d97706', value: 'text-amber-700' },
+  rose: { icon: 'text-rose-600', accent: '#e11d48', value: 'text-rose-700' },
+}
+
+function MetricCard({ label, value, helper, icon: Icon, tone = 'blue', active, onClick }) {
+  const t = TONE[tone]
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-3.5 text-left transition-all duration-300 hover:-translate-y-0.5 ${active
+        ? 'border border-[#00529b]/40 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(0,82,155,0.28)] ring-1 ring-[#00529b]/20'
+        : 'border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300/80 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_24px_-16px_rgba(15,23,42,0.18)]'
+        }`}
+    >
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `linear-gradient(90deg, transparent, ${t.accent}, transparent)` }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          {label}
+        </span>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-slate-100 bg-slate-50/80">
+          <Icon size={13.5} strokeWidth={2.2} className={t.icon} />
+        </span>
+      </div>
+      <div className="mt-1.5">
+        <p className={`text-[26px] leading-none font-bold tabular-nums tracking-tight ${t.value}`}>
+          {value}
+        </p>
+        <p className="mt-1 text-[11px] font-medium text-slate-400">{helper}</p>
+      </div>
+    </button>
+  )
+}
+
 function FollowUpPage({
   customers = [],
   followUps = [],
@@ -47,15 +87,13 @@ function FollowUpPage({
   const today = localDateKey()
   const [activeFilter, setActiveFilter] = useState('Semua')
   const [searchQuery, setSearchQuery] = useState('')
-  const [activeModal, setActiveModal] = useState(null) // { type: 'create' | 'edit' | 'complete', data }
+  const [activeModal, setActiveModal] = useState(null)
 
-  // Metrics
   const metrics = useMemo(
     () => calculateFollowUpMetrics(followUps, today),
     [followUps, today]
   )
 
-  // Filtered & Searched list
   const filteredList = useMemo(() => {
     const list = filterFollowUps(followUps, activeFilter, today)
     if (!searchQuery.trim()) return list
@@ -89,7 +127,7 @@ function FollowUpPage({
   }
 
   const handleDeleteClick = async (item) => {
-    if (window.confirm(`Hapus permanen tindak lanjut ini?`)) {
+    if (window.confirm('Hapus permanen tindak lanjut ini?')) {
       try {
         await onDeleteFollowUp(item.id)
         onNotify?.('Follow-up berhasil dihapus.')
@@ -100,143 +138,100 @@ function FollowUpPage({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header and Title */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="space-y-5">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2.5">
-            <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
-              Follow-up Reminder & Riwayat Tindak Lanjut
+          <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#00529b]/70">
+            KCP Iskandar Palembang
+          </p>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-[22px]">
+              Follow-up
             </h2>
             {metrics.urgentCount > 0 && (
-              <span className="inline-flex items-center gap-1 rounded bg-rose-50 px-2 py-0.5 text-xs font-bold text-rose-700 border border-rose-200">
-                <AlertTriangle size={12} /> {metrics.urgentCount} Mendesak
+              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700">
+                <AlertTriangle size={11} /> {metrics.urgentCount} Mendesak
               </span>
             )}
           </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {isAdmin
-              ? 'Monitoring agenda tindak lanjut seluruh Relationship Manager Bank BRI KCP Iskandar Palembang'
-              : 'Pengingat dan pencatatan tindak lanjut nasabah pasca kunjungan agar tidak ada komitmen terlewat'}
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Pengingat dan riwayat tindak lanjut nasabah pasca kunjungan
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => setActiveModal({ type: 'create' })}
-          className="button-orange w-fit self-start sm:self-auto"
+          className="inline-flex min-h-[40px] items-center gap-1.5 self-start rounded-lg bg-[#00529b] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px sm:self-auto"
         >
           <Plus size={15} /> Tambah Follow-up
         </button>
       </div>
 
-      {/* 4 Practical Metric Cards */}
+      {/* ── Metric Cards ────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Hari Ini */}
-        <button
-          type="button"
+        <MetricCard
+          label="Hari Ini"
+          value={metrics.todayCount}
+          helper="Jatuh tempo"
+          icon={Clock}
+          tone="amber"
+          active={activeFilter === 'Hari Ini'}
           onClick={() => setActiveFilter('Hari Ini')}
-          className={`rounded-xl border p-3.5 text-left transition shadow-xs ${
-            activeFilter === 'Hari Ini'
-              ? 'border-amber-400 bg-amber-50/60 ring-2 ring-amber-200'
-              : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Jatuh Tempo Hari Ini</span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
-              <Clock size={15} />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-amber-800">{metrics.todayCount}</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Jatuh tempo hari ini</p>
-        </button>
-
-        {/* Terlambat */}
-        <button
-          type="button"
+        />
+        <MetricCard
+          label="Terlambat"
+          value={metrics.overdueCount}
+          helper="Melewati batas"
+          icon={AlertTriangle}
+          tone="rose"
+          active={activeFilter === 'Terlambat'}
           onClick={() => setActiveFilter('Terlambat')}
-          className={`rounded-xl border p-3.5 text-left transition shadow-xs ${
-            activeFilter === 'Terlambat'
-              ? 'border-rose-400 bg-rose-50/60 ring-2 ring-rose-200'
-              : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Terlambat (Overdue)</span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
-              <AlertTriangle size={15} />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-rose-600">{metrics.overdueCount}</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Melewati tanggal batas</p>
-        </button>
-
-        {/* Mendatang */}
-        <button
-          type="button"
+        />
+        <MetricCard
+          label="Mendatang"
+          value={metrics.upcomingCount}
+          helper="Agenda lanjutan"
+          icon={CalendarClock}
+          tone="blue"
+          active={activeFilter === 'Mendatang'}
           onClick={() => setActiveFilter('Mendatang')}
-          className={`rounded-xl border p-3.5 text-left transition shadow-xs ${
-            activeFilter === 'Mendatang'
-              ? 'border-blue-400 bg-blue-50/60 ring-2 ring-blue-200'
-              : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Mendatang</span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-blue-50 text-[#00529b]">
-              <CalendarClock size={15} />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-slate-900">{metrics.upcomingCount}</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Agenda terjadwal nanti</p>
-        </button>
-
-        {/* Selesai */}
-        <button
-          type="button"
+        />
+        <MetricCard
+          label="Selesai"
+          value={metrics.completedCount}
+          helper="Tuntas"
+          icon={CheckCircle2}
+          tone="emerald"
+          active={activeFilter === 'Selesai'}
           onClick={() => setActiveFilter('Selesai')}
-          className={`rounded-xl border p-3.5 text-left transition shadow-xs ${
-            activeFilter === 'Selesai'
-              ? 'border-emerald-400 bg-emerald-50/60 ring-2 ring-emerald-200'
-              : 'border-slate-200 bg-white hover:border-slate-300'
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Selesai</span>
-            <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-              <CheckCircle2 size={15} />
-            </div>
-          </div>
-          <p className="mt-2 text-2xl font-bold text-emerald-700">{metrics.completedCount}</p>
-          <p className="mt-0.5 text-[11px] text-slate-400">Telah dituntaskan</p>
-        </button>
+        />
       </div>
 
-      {/* Filter Tabs and Search Bar */}
-      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs md:flex-row md:items-center md:justify-between">
+      {/* ── Filter Tabs & Search ────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
           <input
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari nama nasabah, nomor telepon, atau catatan..."
+            placeholder="Cari nama nasabah, telepon, atau catatan..."
             className="form-control pl-9 text-xs"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+        <div className="no-scrollbar flex w-full items-center gap-1 overflow-x-auto rounded-lg border border-slate-200/80 bg-slate-50 p-1 sm:w-auto">
           {['Semua', 'Hari Ini', 'Mendatang', 'Terlambat', 'Selesai'].map((tab) => (
             <button
               key={tab}
               type="button"
               onClick={() => setActiveFilter(tab)}
-              className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-                activeFilter === tab
-                  ? 'bg-white text-[#00529b] font-bold shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`min-h-[36px] shrink-0 whitespace-nowrap rounded-[6px] px-3 py-1.5 text-xs font-semibold transition-all ${activeFilter === tab
+                ? 'bg-white text-[#00529b] shadow-[0_1px_2px_rgba(15,23,42,0.08)]'
+                : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               {tab}
             </button>
@@ -244,19 +239,19 @@ function FollowUpPage({
         </div>
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden xl:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      {/* ── Desktop Table View ──────────────────────────────────────── */}
+      <div className="hidden overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] xl:block">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                <th className="px-5 py-3">Nasabah</th>
-                <th className="px-4 py-3">Jadwal Follow-up</th>
-                <th className="px-4 py-3">Jenis & Prioritas</th>
-                <th className="px-4 py-3">Catatan / Rencana</th>
-                <th className="px-4 py-3">Status</th>
-                {isAdmin && <th className="px-4 py-3">RM</th>}
-                <th className="px-5 py-3 text-right">Aksi</th>
+              <tr className="border-b border-slate-200/80 bg-slate-50/60 text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                <th className="px-5 py-2.5">Nasabah</th>
+                <th className="px-4 py-2.5">Jadwal</th>
+                <th className="px-4 py-2.5">Jenis & Prioritas</th>
+                <th className="px-4 py-2.5">Catatan / Hasil</th>
+                <th className="px-4 py-2.5">Status</th>
+                {isAdmin && <th className="px-4 py-2.5">RM</th>}
+                <th className="px-5 py-2.5 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
@@ -269,33 +264,28 @@ function FollowUpPage({
                   return (
                     <tr
                       key={item.id}
-                      className={`hover:bg-slate-50/70 transition ${
-                        isOverdue
-                          ? 'bg-rose-50/25'
-                          : isDueToday
-                            ? 'bg-amber-50/25'
-                            : ''
-                      }`}
+                      className={`group transition-colors ${isOverdue
+                        ? 'bg-rose-50/30 hover:bg-rose-50/50'
+                        : isDueToday
+                          ? 'bg-amber-50/30 hover:bg-amber-50/50'
+                          : 'hover:bg-[#f9fbfe]'
+                        }`}
                     >
-                      {/* Nasabah */}
-                      <td className="px-5 py-3.5">
+                      <td className="px-5 py-3">
                         <div className="flex items-center gap-2.5">
-                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
+                          <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[10px] font-bold text-[#00529b]">
                             {(customer?.name || item.customerName || 'N').slice(0, 2).toUpperCase()}
                           </span>
                           <div>
                             <p className="font-semibold text-slate-900">
                               {customer?.name || item.customerName || `Nasabah #${item.customerId}`}
                             </p>
-                            <p className="mt-0.5 text-[11px] text-slate-500">
-                              {(customer?.picName || item.customerPicName) && (
-                                <span className="mr-2">PIC: {customer?.picName || item.customerPicName}</span>
-                              )}
+                            <p className="text-[11px] text-slate-500">
                               <a
                                 href={`tel:${(customer?.phone || item.customerPhone || '').replace(/[^\d+]/g, '')}`}
-                                className="inline-flex items-center gap-1 hover:text-[#00529b]"
+                                className="inline-flex items-center gap-1 transition hover:text-[#00529b]"
                               >
-                                <Phone size={11} className="text-slate-400" />
+                                <Phone size={10} className="text-slate-400" />
                                 {customer?.phone || item.customerPhone || '-'}
                               </a>
                             </p>
@@ -303,42 +293,35 @@ function FollowUpPage({
                         </div>
                       </td>
 
-                      {/* Schedule Date & Time */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5 font-medium text-slate-800">
-                            <Clock size={13} className="text-slate-400" />
-                            <span>{formatDate(item.date)} · {item.time}</span>
-                          </div>
-                          {isOverdue && (
-                            <span className="inline-flex items-center gap-1 rounded bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                              <AlertTriangle size={10} /> Terlambat
-                            </span>
-                          )}
-                          {isDueToday && (
-                            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                              <Clock size={10} /> Hari Ini
-                            </span>
-                          )}
+                      <td className="whitespace-nowrap px-4 py-3">
+                        <div className="flex items-center gap-1.5 font-medium tabular-nums text-slate-800">
+                          <Clock size={12} className="text-slate-400" />
+                          <span>{formatDate(item.date)} · {item.time}</span>
                         </div>
+                        {isOverdue && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-700">
+                            Terlambat
+                          </span>
+                        )}
+                        {isDueToday && (
+                          <span className="mt-0.5 inline-flex items-center gap-1 rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-800">
+                            Hari Ini
+                          </span>
+                        )}
                       </td>
 
-                      {/* Type & Priority */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <div className="space-y-1">
-                          <span className="inline-flex items-center gap-1.5 rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-                            <IconComponent size={12} className="text-[#00529b]" />
+                          <span className="inline-flex items-center gap-1 rounded border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[10.5px] font-medium text-slate-700">
+                            <IconComponent size={11} className="text-[#00529b]" />
                             {item.type}
                           </span>
                           <div>
                             <span
-                              className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-medium border ${
-                                item.priority === 'Tinggi'
-                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                  : item.priority === 'Normal'
-                                    ? 'bg-blue-50 text-[#00529b] border-blue-200'
-                                    : 'bg-slate-100 text-slate-600 border-slate-200'
-                              }`}
+                              className={`inline-block rounded border px-1.5 py-0.5 text-[9.5px] font-semibold ${item.priority === 'Tinggi'
+                                ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                : 'border-slate-200 bg-slate-50 text-slate-600'
+                                }`}
                             >
                               {item.priority}
                             </span>
@@ -346,82 +329,72 @@ function FollowUpPage({
                         </div>
                       </td>
 
-                      {/* Notes & Outcomes */}
-                      <td className="px-4 py-3.5 max-w-xs">
-                        <p className="text-xs text-slate-700 line-clamp-2">{item.notes}</p>
+                      <td className="max-w-xs px-4 py-3">
+                        <p className="line-clamp-1 text-[11.5px] text-slate-700">{item.notes}</p>
                         {item.resultNotes && (
-                          <p className="mt-1 text-[11px] text-emerald-700 font-medium line-clamp-2">
-                            ✓ Hasil: {item.resultNotes}
-                          </p>
-                        )}
-                        {item.appointmentId && (
-                          <p className="mt-1 text-[10px] text-slate-400">
-                            🔗 Dari Kunjungan #{item.appointmentId}
+                          <p className="mt-0.5 line-clamp-1 text-[11px] font-medium text-emerald-700">
+                            Hasil: {item.resultNotes}
                           </p>
                         )}
                       </td>
 
-                      {/* Status */}
-                      <td className="px-4 py-3.5 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <span
-                          className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-medium border ${
-                            isCompleted
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : isCanceled
-                                ? 'bg-slate-100 text-slate-600 border-slate-200'
-                                : 'bg-blue-50 text-[#00529b] border-blue-200'
-                          }`}
+                          className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10.5px] font-semibold ${isCompleted
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : isCanceled
+                              ? 'border-slate-200 bg-slate-50 text-slate-600'
+                              : 'border-blue-200 bg-blue-50 text-[#00529b]'
+                            }`}
                         >
-                          {isCompleted ? <CheckCircle2 size={12} /> : isCanceled ? <XCircle size={12} /> : <Clock size={12} />}
+                          {isCompleted ? <CheckCircle2 size={11} /> : isCanceled ? <XCircle size={11} /> : <Clock size={11} />}
                           {item.status}
                         </span>
                       </td>
 
-                      {/* RM Name (Admin only) */}
                       {isAdmin && (
-                        <td className="px-4 py-3.5 text-slate-600 text-xs whitespace-nowrap">
+                        <td className="whitespace-nowrap px-4 py-3 text-[11.5px] text-slate-600">
                           {item.rmName || 'RM'}
                         </td>
                       )}
 
-                      {/* Actions */}
-                      <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                      <td className="whitespace-nowrap px-5 py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
                           {!isCompleted && !isCanceled && (
                             <button
                               type="button"
                               onClick={() => setActiveModal({ type: 'complete', data: item })}
                               title="Tandai Selesai"
-                              className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition"
+                              className="inline-flex items-center gap-1 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:bg-emerald-100"
                             >
-                              <CheckCircle2 size={13} /> Selesai
+                              <CheckCircle2 size={11} /> Selesai
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => setActiveModal({ type: 'edit', data: item })}
-                            title="Ubah Rincian"
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+                            title="Ubah"
+                            className="rounded-md p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                           >
-                            <Pencil size={14} />
+                            <Pencil size={13} />
                           </button>
                           {!isCompleted && !isCanceled && (
                             <button
                               type="button"
                               onClick={() => handleCancelClick(item)}
-                              title="Batalkan Follow-up"
-                              className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition"
+                              title="Batalkan"
+                              className="rounded-md p-1.5 text-slate-400 transition hover:bg-amber-50 hover:text-amber-600"
                             >
-                              <XCircle size={14} />
+                              <XCircle size={13} />
                             </button>
                           )}
                           <button
                             type="button"
                             onClick={() => handleDeleteClick(item)}
                             title="Hapus"
-                            className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                            className="rounded-md p-1.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -431,26 +404,18 @@ function FollowUpPage({
               ) : (
                 <tr>
                   <td colSpan={isAdmin ? 7 : 6} className="py-12 text-center">
-                    <CalendarClock className="mx-auto size-9 text-slate-300" />
-                    <p className="mt-2 text-sm font-semibold text-slate-700">Tidak ada agenda follow-up</p>
-                    <p className="mt-0.5 text-xs text-slate-400">
-                      {activeFilter !== 'Semua'
-                        ? `Tidak ada data pada filter "${activeFilter}".`
-                        : 'Klik tombol "+ Tambah Follow-up" untuk membuat agenda pengingat.'}
-                    </p>
+                    <CalendarClock className="mx-auto mb-1.5 size-8 text-slate-300" />
+                    <p className="text-xs text-slate-400">Tidak ada agenda follow-up pada filter ini.</p>
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-        <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-3 text-[11px] text-slate-400">
-          Menampilkan {filteredList.length} dari {followUps.length} agenda tindak lanjut
-        </div>
       </div>
 
-      {/* Mobile Card List View */}
-      <div className="block xl:hidden space-y-3">
+      {/* ── Mobile Card List View ───────────────────────────────────── */}
+      <div className="block space-y-3 xl:hidden">
         {filteredList.length > 0 ? (
           filteredList.map((item) => {
             const customer = customers.find((c) => String(c.id) === String(item.customerId))
@@ -460,108 +425,104 @@ function FollowUpPage({
             return (
               <div
                 key={item.id}
-                className={`rounded-xl border p-4 shadow-xs bg-white ${
-                  isOverdue ? 'border-rose-300 ring-1 ring-rose-200' : 'border-slate-200'
-                }`}
+                className={`overflow-hidden rounded-xl bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] ${isOverdue
+                  ? 'border border-rose-300 ring-1 ring-rose-200/70'
+                  : 'border border-slate-200/80'
+                  }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
-                      {(customer?.name || item.customerName || 'N').slice(0, 2).toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-slate-900">
-                        {customer?.name || item.customerName || `Nasabah #${item.customerId}`}
-                      </p>
-                      <p className="text-[11px] text-slate-500 font-mono">
-                        {formatDate(item.date)} · {item.time}
-                      </p>
-                      {(customer?.picName || item.customerPicName) && (
-                        <p className="truncate text-[11px] text-slate-500">PIC: {customer?.picName || item.customerPicName}</p>
-                      )}
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[10px] font-bold text-[#00529b]">
+                        {(customer?.name || item.customerName || 'N').slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-slate-900">
+                          {customer?.name || item.customerName || `Nasabah #${item.customerId}`}
+                        </p>
+                        <p className="truncate font-mono text-[10.5px] tabular-nums text-slate-400">
+                          {formatDate(item.date)} · {item.time}
+                        </p>
+                      </div>
                     </div>
+
+                    <span
+                      className={`inline-flex shrink-0 items-center gap-1 rounded border px-2 py-0.5 text-[9.5px] font-bold ${isCompleted
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : isCanceled
+                          ? 'border-slate-200 bg-slate-50 text-slate-600'
+                          : isOverdue
+                            ? 'border-rose-200 bg-rose-50 text-rose-700'
+                            : 'border-blue-200 bg-blue-50 text-[#00529b]'
+                        }`}
+                    >
+                      {isCompleted ? 'Selesai' : isCanceled ? 'Dibatalkan' : isOverdue ? 'Terlambat' : item.status}
+                    </span>
                   </div>
 
-                  <span
-                    className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-bold border ${
-                      isCompleted
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : isCanceled
-                          ? 'bg-slate-100 text-slate-600 border-slate-200'
-                          : isOverdue
-                            ? 'bg-rose-50 text-rose-700 border-rose-200'
-                            : 'bg-blue-50 text-[#00529b] border-blue-200'
-                    }`}
-                  >
-                    {isCompleted ? 'Selesai' : isCanceled ? 'Dibatalkan' : isOverdue ? 'Terlambat' : item.status}
-                  </span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <span className="inline-flex items-center gap-1 rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-                    <IconComponent size={12} className="text-[#00529b]" />
-                    {item.type}
-                  </span>
-                  <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-600">
-                    Prio: {item.priority}
-                  </span>
-                  {isDueToday && (
-                    <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-                      Hari Ini
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="inline-flex items-center gap-1 rounded border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[10.5px] font-medium text-slate-700">
+                      <IconComponent size={11} className="text-[#00529b]" />
+                      {item.type}
                     </span>
+                    <span className="rounded border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[9.5px] text-slate-600">
+                      {item.priority}
+                    </span>
+                    {isDueToday && (
+                      <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-bold text-amber-800">
+                        Hari Ini
+                      </span>
+                    )}
+                  </div>
+
+                  {item.notes && (
+                    <p className="mt-2 line-clamp-2 text-[11.5px] text-slate-600">{item.notes}</p>
+                  )}
+
+                  {item.resultNotes && (
+                    <p className="mt-1 text-[11px] font-medium text-emerald-700">Hasil: {item.resultNotes}</p>
                   )}
                 </div>
 
-                {item.notes && (
-                  <p className="mt-2 text-xs text-slate-600 line-clamp-2">
-                    {item.notes}
-                  </p>
-                )}
-
-                {item.resultNotes && (
-                  <p className="mt-1 text-[11px] text-emerald-700 font-medium">
-                    ✓ Hasil: {item.resultNotes}
-                  </p>
-                )}
-
-                <div className="mt-3 flex items-center justify-end gap-2 border-t border-slate-100 pt-2.5">
+                <div className="flex items-center justify-end gap-1.5 border-t border-slate-100 bg-slate-50/60 px-3 py-2">
                   {!isCompleted && !isCanceled && (
                     <button
                       type="button"
                       onClick={() => setActiveModal({ type: 'complete', data: item })}
-                      className="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-xs hover:bg-emerald-700"
+                      className="inline-flex min-h-[38px] items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-emerald-700 active:translate-y-px"
                     >
-                      <CheckCircle2 size={13} /> Selesaikan
+                      <CheckCircle2 size={13} /> Selesai
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => setActiveModal({ type: 'edit', data: item })}
-                    className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
                   >
                     <Pencil size={13} /> Edit
                   </button>
                   <button
                     type="button"
                     onClick={() => handleDeleteClick(item)}
-                    className="inline-flex items-center rounded-md border border-slate-200 bg-white p-1 text-xs text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                    title="Hapus"
+                    className="flex size-9.5 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                    aria-label="Hapus follow-up"
                   >
-                    <Trash2 size={13} />
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>
             )
           })
         ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-xs">
-            <CalendarClock className="mx-auto size-8 text-slate-300" />
-            <p className="mt-2 text-sm font-semibold text-slate-700">Tidak ada agenda follow-up</p>
-            <p className="mt-0.5 text-xs text-slate-400">Pilih tab filter lain atau tambah agenda baru.</p>
+          <div className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white p-8 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <CalendarClock size={20} className="text-slate-300" />
+            <p className="text-[11.5px] text-slate-400">Tidak ada agenda follow-up pada filter ini.</p>
           </div>
         )}
       </div>
 
-      {/* Modal Dialogs */}
+      {/* ── Modals (tidak diubah) ──────────────────────────────────── */}
       {activeModal?.type === 'create' && (
         <FollowUpFormModal
           customers={customers}

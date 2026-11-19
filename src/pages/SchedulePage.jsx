@@ -9,9 +9,7 @@ import {
   MapPin,
   Navigation,
   Pencil,
-  Phone,
   Plus,
-  Route,
   Trash2,
 } from 'lucide-react'
 import AppointmentForm from '../components/AppointmentForm'
@@ -22,8 +20,8 @@ import { formatDate, getAppointmentDateTime, getCustomer, localDateKey } from '.
 const RouteMapModal = lazy(() => import('../components/RouteMapModal'))
 
 function SchedulePage({
-  customers,
-  appointments,
+  customers = [],
+  appointments = [],
   onSaveAppointment,
   onDeleteAppointment,
   onSaveVisit,
@@ -42,11 +40,13 @@ function SchedulePage({
   const monthAppointments = useMemo(() => appointments
     .filter((appointment) => appointment.date.startsWith(monthKey))
     .sort((first, second) => `${first.date}${first.time}`.localeCompare(`${second.date}${second.time}`)),
-  [appointments, monthKey])
+    [appointments, monthKey])
+
   const filteredAppointments = monthAppointments.filter((appointment) => (
     (view === 'calendar' ? appointment.date === selectedDate : true)
     && (statusFilter === 'Semua status' || appointment.status === statusFilter)
   ))
+
   const upcoming = appointments
     .filter((appointment) => appointment.status === 'Terjadwal' && getAppointmentDateTime(appointment) >= new Date())
     .sort((first, second) => getAppointmentDateTime(first) - getAppointmentDateTime(second))
@@ -100,41 +100,46 @@ function SchedulePage({
   }
 
   return (
-    <>
-      {/* Top Header Bar */}
-      <div className="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+    <div className="space-y-5">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 sm:text-xl">Jadwal Kunjungan</h2>
-          <p className="mt-1 text-xs text-slate-500">
-            Perencanaan agenda dan rute kunjungan nasabah Bank BRI KCP Iskandar Palembang
+          <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#00529b]/70">
+            KCP Iskandar Palembang
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-[22px]">
+            Jadwal Kunjungan
+          </h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Agenda dan kalender kunjungan nasabah
           </p>
         </div>
         <button
           type="button"
           onClick={() => setModal({ type: 'appointment' })}
-          className="button-orange w-fit self-start sm:self-auto"
+          className="inline-flex min-h-[40px] items-center gap-1.5 self-start rounded-lg bg-[#00529b] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px sm:self-auto"
         >
           <Plus size={15} /> Buat Jadwal
         </button>
       </div>
 
       {actionError && (
-        <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs text-rose-700" role="alert">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700" role="alert">
           {actionError}
         </div>
       )}
 
-      {/* Toolbar: Month Navigation, Status Filter, View Toggle */}
-      <div className="mb-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3.5 shadow-xs sm:flex-row sm:items-center sm:justify-between">
+      {/* ── Toolbar ─────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200/80 bg-white p-0.5 shadow-[0_1px_1px_rgba(15,23,42,0.03)]">
             <button
               type="button"
               onClick={() => changeMonth(-1)}
-              className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition"
+              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-[#00529b]"
               aria-label="Bulan sebelumnya"
             >
-              <ArrowLeft size={16} />
+              <ArrowLeft size={15} />
             </button>
             <button
               type="button"
@@ -143,20 +148,20 @@ function SchedulePage({
                 setMonth(now)
                 setSelectedDate(today)
               }}
-              className="rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+              className="rounded-md px-2.5 py-1 text-[11.5px] font-semibold text-slate-700 transition hover:bg-slate-50 hover:text-[#00529b]"
             >
               Hari Ini
             </button>
             <button
               type="button"
               onClick={() => changeMonth(1)}
-              className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-500 hover:bg-slate-100 transition"
+              className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-50 hover:text-[#00529b]"
               aria-label="Bulan berikutnya"
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={15} />
             </button>
           </div>
-          <h3 className="ml-1 text-sm font-bold text-slate-900">
+          <h3 className="ml-1 text-[13px] font-bold tracking-tight text-slate-900 sm:text-sm">
             {new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric' }).format(month)}
           </h3>
         </div>
@@ -169,33 +174,31 @@ function SchedulePage({
               className="form-control h-8 min-w-36 appearance-none pr-8 text-xs font-medium"
               aria-label="Filter status kunjungan"
             >
-              {['Semua status', 'Terjadwal', 'Execute', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Batal'].map((status) => (
+              {['Semua status', 'Terjadwal', 'Execute', 'Selesai', 'Reschedule', 'Tidak ditemui', 'Dibatalkan'].map((status) => (
                 <option key={status}>{status}</option>
               ))}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-400" />
           </div>
 
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200/80 bg-slate-50 p-0.5">
             <button
               type="button"
               onClick={() => setView('calendar')}
-              className={`rounded px-3 py-1 text-xs font-semibold transition ${
-                view === 'calendar'
-                  ? 'bg-white text-[#00529b] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`rounded-[6px] px-3 py-1.5 text-[11.5px] font-semibold transition-all ${view === 'calendar'
+                  ? 'bg-white text-[#00529b] shadow-[0_1px_2px_rgba(15,23,42,0.08)]'
+                  : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               Kalender
             </button>
             <button
               type="button"
               onClick={() => setView('list')}
-              className={`rounded px-3 py-1 text-xs font-semibold transition ${
-                view === 'list'
-                  ? 'bg-white text-[#00529b] shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
+              className={`rounded-[6px] px-3 py-1.5 text-[11.5px] font-semibold transition-all ${view === 'list'
+                  ? 'bg-white text-[#00529b] shadow-[0_1px_2px_rgba(15,23,42,0.08)]'
+                  : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               Daftar
             </button>
@@ -203,20 +206,20 @@ function SchedulePage({
         </div>
       </div>
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,.8fr)]">
-        {/* Main Schedule Container */}
-        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xs">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.8fr)_minmax(280px,.8fr)]">
+        {/* ── Main Schedule Container ─────────────────────────────── */}
+        <section className="schedule-calendar overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
           {view === 'calendar' ? (
             <>
               {/* Day Headers */}
-              <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50 text-center text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:text-[10px]">
+              <div className="schedule-calendar-weekdays grid grid-cols-7 border-b border-slate-200/80 bg-slate-50/60 text-center text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">
                 {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map((day) => (
                   <div className="py-2.5" key={day}>{day}</div>
                 ))}
               </div>
 
               {/* Month Grid */}
-              <div className="grid grid-cols-7">
+              <div className="schedule-calendar-days grid grid-cols-7">
                 {calendarCells.map(({ date, key, inMonth }) => {
                   const dayAppointments = appointmentsForDate(key)
                   const selected = selectedDate === key
@@ -227,17 +230,20 @@ function SchedulePage({
                       type="button"
                       onClick={() => setSelectedDate(key)}
                       aria-label={`${formatDate(key, { day: 'numeric', month: 'long', year: 'numeric' })}, ${dayAppointments.length} agenda`}
-                      className={`min-h-[58px] border-b border-r border-slate-100 p-0.5 text-left transition sm:min-h-[90px] sm:p-2 ${
-                        !inMonth ? 'bg-slate-50/40 text-slate-300' : 'text-slate-700'
-                      } ${
-                        selected
+                      className={`group min-h-[56px] border-b border-r border-slate-100 p-1 text-left transition sm:min-h-[88px] sm:p-2 ${!inMonth ? 'bg-slate-50/40 text-slate-300' : 'text-slate-700'
+                        } ${selected
                           ? 'bg-[#eaf3fb]/60 ring-1 ring-inset ring-[#00529b]'
-                          : 'hover:bg-slate-50'
-                      }`}
+                          : 'hover:bg-[#f9fbfe]'
+                        }`}
                     >
-                      <span className={`inline-flex size-6 items-center justify-center rounded-full text-[11px] font-semibold sm:text-xs ${
-                        isToday ? 'bg-[#00529b] text-white font-bold' : ''
-                      }`}>
+                      <span
+                        className={`inline-flex size-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums sm:size-5.5 sm:text-xs ${isToday
+                            ? 'bg-[#00529b] font-bold text-white shadow-[0_1px_2px_rgba(0,82,155,0.35)]'
+                            : selected && inMonth
+                              ? 'font-bold text-[#00529b]'
+                              : ''
+                          }`}
+                      >
                         {date.getDate()}
                       </span>
                       <div className="mt-1 hidden space-y-1 sm:block">
@@ -247,39 +253,21 @@ function SchedulePage({
                             ? 'bg-emerald-50 text-emerald-700'
                             : appointment.status === 'Execute'
                               ? 'bg-indigo-50 text-indigo-700'
-                            : appointment.status === 'Reschedule'
-                              ? 'bg-amber-50 text-amber-700'
-                              : 'bg-blue-50 text-[#00529b]'
+                              : appointment.status === 'Reschedule'
+                                ? 'bg-amber-50 text-amber-700'
+                                : 'bg-blue-50 text-[#00529b]'
                           return (
                             <div
                               key={appointment.id}
                               className={`truncate rounded px-1 py-0.5 text-[9px] font-medium ${statusBg}`}
                             >
-                              <span className="font-bold">{appointment.time} </span>
+                              <span className="font-bold tabular-nums">{appointment.time} </span>
                               {cust?.name || 'Nasabah'}
                             </div>
                           )
                         })}
-                        {dayAppointments.length > 0 && (
-                          <span className="mt-1 flex justify-center gap-0.5 sm:hidden" aria-hidden="true">
-                            {dayAppointments.slice(0, 3).map((appointment) => (
-                              <span
-                                key={appointment.id}
-                                className={`size-1 rounded-full ${
-                                  appointment.status === 'Selesai'
-                                    ? 'bg-emerald-500'
-                                    : appointment.status === 'Execute'
-                                      ? 'bg-indigo-500'
-                                    : appointment.status === 'Reschedule'
-                                      ? 'bg-amber-500'
-                                      : 'bg-[#00529b]'
-                                }`}
-                              />
-                            ))}
-                          </span>
-                        )}
                         {dayAppointments.length > 2 && (
-                          <span className="block px-1 text-[9px] text-slate-400 font-medium">
+                          <span className="block px-1 text-[9px] font-medium text-slate-400">
                             +{dayAppointments.length - 2} lainnya
                           </span>
                         )}
@@ -289,21 +277,26 @@ function SchedulePage({
                 })}
               </div>
 
-              {/* Agenda Terpilih di Bawah Kalender */}
-              <div className="border-t border-slate-200">
-                <div className="flex items-center justify-between bg-slate-50/50 px-5 py-3 border-b border-slate-100">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">
-                      Agenda: {formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                    </h4>
-                    <p className="text-[11px] text-slate-500">
-                      {filteredAppointments.length} agenda pada tanggal ini
-                    </p>
+              {/* Selected Day Agenda */}
+              <div className="schedule-calendar-selected-day border-t border-slate-200/80">
+                <div className="flex flex-col gap-2 border-b border-slate-100 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-2.5">
+                    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[#00529b]">
+                      <CalendarDays size={14} strokeWidth={2.2} />
+                    </span>
+                    <div>
+                      <h4 className="text-[13px] font-bold tracking-tight text-slate-900">
+                        Agenda: {formatDate(selectedDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                      </h4>
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        {filteredAppointments.length} agenda pada tanggal ini
+                      </p>
+                    </div>
                   </div>
                   <button
                     type="button"
                     onClick={() => setModal({ type: 'appointment', date: selectedDate })}
-                    className="inline-flex min-h-[40px] shrink-0 items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition"
+                    className="inline-flex items-center gap-1 self-start rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[11.5px] font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] sm:self-auto"
                   >
                     <Plus size={13} /> Tambah Agenda
                   </button>
@@ -326,22 +319,27 @@ function SchedulePage({
                       )
                     })
                   ) : (
-                    <div className="py-8 text-center text-xs text-slate-400">
-                      Tidak ada agenda kunjungan pada tanggal ini.
+                    <div className="flex flex-col items-center gap-1.5 py-8 text-center">
+                      <CalendarDays size={20} className="text-slate-300" />
+                      <p className="text-[11.5px] text-slate-400">Tidak ada agenda kunjungan pada tanggal ini.</p>
                     </div>
                   )}
                 </div>
               </div>
             </>
           ) : (
-            /* List View */
+            /* ── List View ─────────────────────────────────────── */
             <div className="divide-y divide-slate-100">
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-100 bg-slate-50/50">
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900">Daftar Jadwal Kunjungan</h3>
-                  <p className="text-[11px] text-slate-500">{filteredAppointments.length} agenda ditemukan</p>
+              <div className="flex items-center justify-between border-b border-slate-100 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-5 py-3">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[#00529b]">
+                    <CalendarDays size={14} strokeWidth={2.2} />
+                  </span>
+                  <div>
+                    <h3 className="text-[13px] font-bold tracking-tight text-slate-900">Daftar Jadwal Kunjungan</h3>
+                    <p className="mt-0.5 text-[11px] text-slate-500">{filteredAppointments.length} agenda ditemukan</p>
+                  </div>
                 </div>
-                <CalendarDays size={16} className="text-slate-400" />
               </div>
               {filteredAppointments.length > 0 ? (
                 filteredAppointments.map((appointment) => {
@@ -359,94 +357,80 @@ function SchedulePage({
                   )
                 })
               ) : (
-                <div className="py-12 text-center text-xs text-slate-400">
-                  Tidak ada jadwal yang cocok dengan filter yang dipilih.
+                <div className="flex flex-col items-center gap-1.5 py-12 text-center">
+                  <CalendarDays size={22} className="text-slate-300" />
+                  <p className="text-[11.5px] text-slate-400">Tidak ada jadwal yang sesuai dengan filter.</p>
                 </div>
               )}
             </div>
           )}
         </section>
 
-        {/* Sidebar Widget: Pengingat & Prioritas */}
-        <aside className="space-y-5">
-          <section className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div>
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800">
-                  Pengingat Terdekat
-                </h4>
-                <p className="text-[11px] text-slate-400">Agenda yang belum dikunjungi</p>
+        {/* ── Sidebar Widget: Pengingat & Info ────────────────────── */}
+        <aside className="space-y-4">
+          <section className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <div className="flex items-start justify-between border-b border-slate-200/80 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-4 py-3">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-amber-200/70 bg-amber-50 text-amber-600">
+                  <AlarmClock size={14} strokeWidth={2.2} />
+                </span>
+                <div>
+                  <h4 className="text-[13px] font-bold tracking-tight text-slate-900">Pengingat Terdekat</h4>
+                  <p className="mt-0.5 text-[11px] text-slate-500">Jadwal yang belum dilaksanakan</p>
+                </div>
               </div>
-              <AlarmClock size={16} className="text-amber-600" />
             </div>
 
-            <div className="mt-3 space-y-2.5">
+            <div className="divide-y divide-slate-100">
               {upcoming.length > 0 ? (
                 upcoming.map((appointment) => {
                   const customer = getCustomer(customers, appointment.customerId)
                   const isToday = appointment.date === today
                   return (
-                    <div key={appointment.id} className="rounded-lg border border-slate-100 p-2.5 hover:bg-slate-50/70 transition">
+                    <div key={appointment.id} className="px-4 py-2.5 transition hover:bg-[#f9fbfe]">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-xs font-semibold text-slate-900 truncate">
+                        <p className="truncate text-[12px] font-semibold text-slate-900">
                           {customer?.name || 'Nasabah dihapus'}
                         </p>
                         {appointment.priority === 'Tinggi' && (
-                          <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[9px] font-bold text-rose-600 border border-rose-200">
+                          <span className="shrink-0 rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-600">
                             Prio
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        <Clock3 className="mr-1 inline size-3 text-slate-400" />
-                        {isToday ? 'Hari Ini' : formatDate(appointment.date, { day: 'numeric', month: 'short' })} · {appointment.time}
+                      <p className="mt-1 flex items-center gap-1 text-[11px] text-slate-500">
+                        <Clock3 size={11} className="text-slate-400" />
+                        <span>
+                          {isToday ? (
+                            <span className="font-semibold text-[#00529b]">Hari Ini</span>
+                          ) : (
+                            formatDate(appointment.date, { day: 'numeric', month: 'short' })
+                          )}
+                          <span className="mx-1 text-slate-300">·</span>
+                          <span className="tabular-nums">{appointment.time}</span>
+                        </span>
                       </p>
                       {customer?.address && (
-                        <p className="mt-1 flex items-start gap-1 text-[10px] text-slate-400 line-clamp-1">
-                          <MapPin className="mt-0.5 size-3 shrink-0" />
-                          {customer.address}
+                        <p className="mt-0.5 flex items-start gap-1 text-[10px] text-slate-400">
+                          <MapPin size={10} className="mt-0.5 shrink-0" />
+                          <span className="line-clamp-1">{customer.address}</span>
                         </p>
-                      )}
-                      {customer?.address && (
-                        <button
-                          type="button"
-                          onClick={() => showCustomerMap(customer)}
-                          className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-[#00529b] hover:underline"
-                        >
-                          <Navigation size={10} /> Lihat Rute & Peta
-                        </button>
                       )}
                     </div>
                   )
                 })
               ) : (
-                <p className="py-4 text-center text-xs text-slate-400">Tidak ada pengingat aktif.</p>
+                <div className="flex flex-col items-center gap-1 py-6 text-center">
+                  <AlarmClock size={18} className="text-slate-300" />
+                  <p className="text-[11px] text-slate-400">Tidak ada pengingat aktif.</p>
+                </div>
               )}
-            </div>
-          </section>
-
-          {/* Tips Info Card */}
-          <section className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-[#003b70]">
-            <div className="flex items-center gap-2 font-bold text-[#00529b]">
-              <Route size={15} />
-              <span>Prioritas Kunjungan Lapangan</span>
-            </div>
-            <p className="mt-1.5 text-[11px] leading-relaxed text-slate-600">
-              Check-in dapat dilakukan setelah tiba di lokasi nasabah. Data check-in GPS otomatis tervalidasi dalam radius radius bank.
-            </p>
-            <div className="mt-3 flex items-center gap-3 text-[10px] text-slate-500">
-              <span className="flex items-center gap-1">
-                <span className="size-2 rounded-full bg-rose-500" /> Prioritas Tinggi
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="size-2 rounded-full bg-[#00529b]" /> Normal
-              </span>
             </div>
           </section>
         </aside>
       </div>
 
-      {/* Modals */}
+      {/* ── Modals (tidak diubah) ──────────────────────────────────── */}
       {modal?.type === 'appointment' && (
         <AppointmentForm
           customers={customers}
@@ -466,34 +450,36 @@ function SchedulePage({
         />
       )}
       {modal?.type === 'map' && (
-        <Suspense fallback={<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 text-sm text-white">Memuat peta...</div>}>
+        <Suspense fallback={<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 text-xs text-white">Memuat peta...</div>}>
           <RouteMapModal customer={modal.customer} onClose={() => setModal(null)} />
         </Suspense>
       )}
-    </>
+    </div>
   )
 }
 
 function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelete }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50/70 transition">
-      <div className="flex items-start gap-3 min-w-0">
-        <div className="w-12 shrink-0 pt-0.5 text-xs font-bold tabular-nums text-slate-700">
-          {appointment.time}
+    <div className="flex flex-col justify-between gap-3 px-4 py-3.5 transition hover:bg-[#f9fbfe] sm:flex-row sm:items-center sm:px-5">
+      <div className="flex min-w-0 items-start gap-3">
+        <div className="w-12 shrink-0 pt-0.5 text-center">
+          <span className="inline-flex rounded-md border border-[#00529b]/15 bg-[#eaf3fb] px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums text-[#00529b]">
+            {appointment.time}
+          </span>
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-bold text-slate-900">
+            <span className="text-[13px] font-semibold text-slate-900">
               {customer?.name || 'Nasabah dihapus'}
             </span>
             <StatusBadge status={appointment.status} />
             {appointment.priority === 'Tinggi' && (
-              <span className="rounded bg-rose-50 px-1.5 py-0.2 text-[9px] font-bold text-rose-600 border border-rose-200">
+              <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-600">
                 Prio
               </span>
             )}
           </div>
-          <p className="mt-0.5 text-[11px] text-slate-500 truncate">
+          <p className="mt-0.5 truncate text-[11.5px] text-slate-500">
             {appointment.purpose}
             {customer?.address && (
               <>
@@ -502,61 +488,45 @@ function AppointmentRow({ appointment, customer, onMap, onEdit, onVisit, onDelet
               </>
             )}
           </p>
-          {(customer?.picName || customer?.phone) && (
-            <p className="mt-1 text-[10px] text-slate-500">
-              {customer?.picName && <span>PIC: {customer.picName}{customer?.phone ? ' · ' : ''}</span>}
-              {customer?.phone && (
-                <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="inline-flex items-center gap-1 text-[#00529b] hover:underline">
-                  <Phone size={10} /> {customer.phone}
-                </a>
-              )}
-            </p>
-          )}
-          {customer?.address && (
-            <button
-              type="button"
-              onClick={onMap}
-              className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#00529b] hover:underline"
-            >
-              <Navigation size={10} /> Peta Lokasi
-            </button>
-          )}
         </div>
       </div>
 
       <div className="flex w-full items-center justify-end gap-1.5 sm:w-auto sm:shrink-0">
-        {appointment.status === 'Terjadwal' ? (
+        <button
+          type="button"
+          onClick={onVisit}
+          className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg bg-[#00529b] px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px sm:flex-none"
+        >
+          {appointment.status === 'Terjadwal' ? 'Check-in' : 'Hasil'}
+        </button>
+        {customer?.address && (
           <button
             type="button"
-            onClick={onVisit}
-            className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-[#00529b] shadow-xs hover:bg-[#eaf3fb] hover:border-[#00529b] transition sm:flex-none"
+            onClick={onMap}
+            title="Peta Lokasi"
+            className="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
+            aria-label="Peta Lokasi"
           >
-            Check-in
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={onVisit}
-            className="min-h-[40px] flex-1 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700 shadow-2xs hover:bg-white hover:text-[#00529b] hover:border-[#00529b] transition sm:flex-none"
-          >
-            Hasil Kunjungan
+            <Navigation size={15} />
           </button>
         )}
         <button
           type="button"
           onClick={onEdit}
           title="Ubah Jadwal"
-          className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition"
+          className="flex size-10 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
+          aria-label="Ubah Jadwal"
         >
-          <Pencil size={14} />
+          <Pencil size={15} />
         </button>
         <button
           type="button"
           onClick={onDelete}
           title="Hapus Jadwal"
-          className="min-h-[40px] min-w-[40px] rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+          className="flex size-10 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:bg-rose-50"
+          aria-label="Hapus Jadwal"
         >
-          <Trash2 size={14} />
+          <Trash2 size={15} />
         </button>
       </div>
     </div>

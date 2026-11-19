@@ -50,7 +50,6 @@ function getSentSet() {
     if (!raw) return new Set()
     const parsed = JSON.parse(raw)
     // Prune entries older than 2 days to prevent unbounded growth
-    const today = todayString()
     const twoDaysAgo = new Date(Date.now() - 2 * 86400000)
       .toISOString().slice(0, 10)
     const pruned = parsed.filter((key) => {
@@ -166,7 +165,7 @@ export function sendTestNotification() {
   const key = `test:${Date.now()}`
   return sendBrowserNotification(
     key,
-    'CallPlan — Notifikasi Aktif ✓',
+    'e-VisitBRI — Notifikasi Aktif',
     'Pengingat jadwal dan follow-up akan muncul di sini.',
     { tag: 'callplan-test' }
   )
@@ -182,7 +181,7 @@ export function notifyScheduleChange(title, body, onClick) {
 
   return sendBrowserNotification(
     `update:${Date.now()}`,
-    title || 'Pembaruan Jadwal — CallPlan',
+    title || 'Pembaruan Jadwal — e-VisitBRI',
     body || 'Jadwal atau status kunjungan telah diperbarui.',
     { tag: `cp-update-${Date.now()}`, onClick }
   )
@@ -219,7 +218,7 @@ export function checkVisitReminders(appointments = [], settings, onNavigate) {
         const label = minutesLeft === 0 ? 'Sekarang' : `${minutesLeft} menit lagi`
         const sent = sendBrowserNotification(
           dedupKey,
-          'Pengingat Kunjungan — CallPlan',
+          'Pengingat Kunjungan — e-VisitBRI',
           `Ada agenda kunjungan nasabah ${label} (pukul ${apt.time}).`,
           {
             tag: dedupKey,
@@ -273,7 +272,7 @@ export function checkFollowUpReminders(followUps = [], settings, onNavigate) {
       if (!wasSent(dedupKey)) {
         const sent = sendBrowserNotification(
           dedupKey,
-          'Follow-up Terlambat — CallPlan',
+          'Follow-up Terlambat — e-VisitBRI',
           `Ada tindak lanjut yang sudah melewati jatuh tempo dan belum diselesaikan.`,
           {
             tag: dedupKey,
@@ -288,7 +287,7 @@ export function checkFollowUpReminders(followUps = [], settings, onNavigate) {
         const sent = sendBrowserNotification(
           dedupKey,
           'Pengingat Follow-up Hari Ini',
-          `Ada tindak lanjut nasabah yang dijadwalkan untuk hari ini di CallPlan.`,
+          `Ada tindak lanjut nasabah yang dijadwalkan untuk hari ini di e-VisitBRI.`,
           {
             tag: dedupKey,
             onClick: () => onNavigate?.('follow-up'),

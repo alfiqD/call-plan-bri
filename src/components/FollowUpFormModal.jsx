@@ -76,8 +76,8 @@ function FollowUpFormModal({
 
   return (
     <Modal
-      title={isEditing ? 'Ubah Agenda Follow-up' : 'Jadwalkan Follow-up Nasabah'}
-      description="Atur pengingat dan rincian tindak lanjut agar nasabah tidak terlewat."
+      title={isEditing ? 'Edit Agenda Follow-up' : 'Jadwalkan Follow-up'}
+      description="Atur tanggal, waktu, dan rincian tindak lanjut nasabah."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -94,7 +94,7 @@ function FollowUpFormModal({
             <div>
               <p className="font-semibold">Terhubung dengan Kunjungan Lapangan</p>
               <p className="mt-0.5 text-[11px] text-blue-800">
-                Tindak lanjut ini dibuat sebagai kelanjutan agenda kunjungan ({appointment?.date || 'Jadwal'} · {appointment?.purpose || 'Kunjungan'}).
+                Tindak lanjut ini merupakan kelanjutan dari kunjungan ({appointment?.date || 'Jadwal'} · {appointment?.purpose || 'Kunjungan'}).
               </p>
             </div>
           </div>
@@ -102,8 +102,8 @@ function FollowUpFormModal({
 
         {/* Customer Selector */}
         {preselectedCustomer ? (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[11px] font-semibold text-slate-400">Target Nasabah</p>
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Nasabah</p>
             <p className="text-sm font-bold text-slate-900">{selectedCustomer.name}</p>
             {selectedCustomer.picName && <p className="text-xs text-slate-600">PIC: {selectedCustomer.picName}</p>}
             <p className="text-xs text-slate-500">{selectedCustomer.phone} · {selectedCustomer.address}</p>
@@ -119,7 +119,7 @@ function FollowUpFormModal({
               disabled={isEditing}
               className="form-control"
             >
-              <option value="">-- Pilih Nasabah --</option>
+              <option value="">Pilih nasabah</option>
               {customers.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}{c.picName ? ` · PIC: ${c.picName}` : ''} — {c.phone}
@@ -180,14 +180,14 @@ function FollowUpFormModal({
                 type="button"
                 key={p}
                 onClick={() => setForm((c) => ({ ...c, priority: p }))}
-                className={`rounded-xl border py-2 text-xs font-semibold transition ${
+                className={`rounded-lg border py-2 text-xs font-semibold transition ${
                   form.priority === p
                     ? p === 'Tinggi'
-                      ? 'border-rose-400 bg-rose-50 text-rose-700 ring-2 ring-rose-200'
+                      ? 'border-rose-400 bg-rose-50 text-rose-700 ring-1 ring-rose-300'
                       : p === 'Normal'
-                        ? 'border-indigo-400 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-200'
-                        : 'border-slate-400 bg-slate-100 text-slate-800 ring-2 ring-slate-200'
-                    : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                        ? 'border-[#00529b] bg-[#eaf3fb] text-[#00529b] ring-1 ring-blue-200'
+                        : 'border-slate-400 bg-slate-100 text-slate-800 ring-1 ring-slate-300'
+                    : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                 }`}
               >
                 {p}
@@ -198,13 +198,13 @@ function FollowUpFormModal({
 
         {/* Notes */}
         <label className="form-label">
-          Catatan & Rencana Tindak Lanjut <span className="text-rose-500">*</span>
+          Catatan Tindak Lanjut <span className="text-rose-500">*</span>
           <textarea
             name="notes"
             value={form.notes}
             onChange={update}
             rows={3}
-            placeholder="Contoh: Telepon nasabah jam 10 pagi untuk menanyakan kelengkapan berkas KTP dan slip gaji..."
+            placeholder="Rincian agenda atau instruksi tindak lanjut nasabah..."
             required
             className="form-control resize-y"
           />
@@ -212,7 +212,7 @@ function FollowUpFormModal({
 
         {/* Status for Editing */}
         {isEditing && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 space-y-3">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 space-y-3">
             <label className="form-label">
               Status Tindak Lanjut
               <select
@@ -235,7 +235,7 @@ function FollowUpFormModal({
                   value={form.resultNotes}
                   onChange={update}
                   rows={2}
-                  placeholder="Contoh: Dokumen sudah lengkap dan telah diterima di kantor..."
+                  placeholder="Catatan hasil tindak lanjut..."
                   className="form-control resize-y bg-white"
                 />
               </label>
@@ -243,19 +243,19 @@ function FollowUpFormModal({
           </div>
         )}
 
-        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+        <div className="sticky bottom-0 -mx-3.5 -mb-3.5 flex flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-white px-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:mb-0 sm:flex-row sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="button-secondary"
+            className="button-secondary !min-h-[44px] w-full sm:w-auto"
           >
             Batal
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="button-orange"
+            className="button-orange !min-h-[44px] w-full sm:w-auto"
           >
             {isSubmitting ? (
               <>

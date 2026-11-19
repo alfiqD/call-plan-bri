@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import {
   CalendarCheck2,
-  CalendarClock,
   CalendarDays,
   Clock3,
   ChevronLeft,
@@ -9,8 +8,6 @@ import {
   MapPin,
   Plus,
   RotateCcw,
-  ShieldCheck,
-  UserCheck,
 } from 'lucide-react'
 import StatusBadge from '../../components/StatusBadge'
 import VisitUpdateModal from '../../components/VisitUpdateModal'
@@ -18,6 +15,62 @@ import CustomerDistributionMap from '../../components/CustomerDistributionMap'
 import { formatDate, getCustomer, localDateKey } from '../../data/workspace'
 import { calculateFollowUpMetrics, getFollowUpStatusInfo } from '../../services/followUp'
 import { calculateVisitMetrics, getWeekDateRange } from '../../services/visitMetrics'
+
+const TONE = {
+  blue: { icon: 'text-[#00529b]', accent: '#00529b', value: 'text-slate-900' },
+  emerald: { icon: 'text-emerald-600', accent: '#059669', value: 'text-emerald-700' },
+  amber: { icon: 'text-amber-600', accent: '#d97706', value: 'text-amber-700' },
+  rose: { icon: 'text-rose-600', accent: '#e11d48', value: 'text-rose-700' },
+  slate: { icon: 'text-slate-400', accent: '#94a3b8', value: 'text-slate-700' },
+}
+
+function MetricCard({ label, value, helper, icon: Icon, tone = 'blue', featured = false }) {
+  const t = TONE[tone]
+  return (
+    <div
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-3.5 transition-all duration-300 hover:-translate-y-0.5 ${featured
+          ? 'border border-[#00529b]/25 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(0,82,155,0.25)]'
+          : 'border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300/80 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_24px_-16px_rgba(15,23,42,0.18)]'
+        }`}
+    >
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `linear-gradient(90deg, transparent, ${t.accent}, transparent)` }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          {label}
+        </span>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-slate-100 bg-slate-50/80">
+          <Icon size={13.5} strokeWidth={2.2} className={t.icon} />
+        </span>
+      </div>
+      <div className="mt-1.5">
+        <p className={`text-[26px] leading-none font-bold tabular-nums tracking-tight ${t.value}`}>
+          {value}
+        </p>
+        <p className="mt-1 text-[11px] font-medium text-slate-400">{helper}</p>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ icon: Icon, title, subtitle, trailing }) {
+  return (
+    <div className="flex flex-col gap-2 border-b border-slate-200/80 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[#00529b]">
+          <Icon size={14} strokeWidth={2.2} />
+        </span>
+        <div>
+          <h3 className="text-[13px] font-bold tracking-tight text-slate-900">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{subtitle}</p>}
+        </div>
+      </div>
+      {trailing && <div className="self-start sm:self-auto">{trailing}</div>}
+    </div>
+  )
+}
 
 function RMDashboardView({
   customers = [],
@@ -48,18 +101,10 @@ function RMDashboardView({
     [appointments, periodRange]
   )
 
-  const upcomingAppointments = useMemo(() => {
-    return appointments
-      .filter((a) => a.status === 'Terjadwal' && a.date >= today)
-      .sort((a, b) => `${a.date}T${a.time}`.localeCompare(`${b.date}T${b.time}`))
-  }, [appointments, today])
-
-  // Follow-up metrics
   const followUpMetrics = useMemo(() => {
     return calculateFollowUpMetrics(followUps, today)
   }, [followUps, today])
 
-  // Today's Appointments
   const todayAppointments = useMemo(() => {
     return appointments
       .filter((a) => a.date === today)
@@ -67,7 +112,7 @@ function RMDashboardView({
   }, [appointments, today])
 
   const greeting = currentDate.getHours() < 11 ? 'Selamat pagi' : currentDate.getHours() < 15 ? 'Selamat siang' : 'Selamat sore'
-  const rmName = userProfile?.nama || 'Relationship Manager'
+  const rmName = userProfile?.nama || 'Petugas RM'
 
   const handleSaveVisit = async (updated) => {
     await onSaveVisit(updated)
@@ -76,307 +121,274 @@ function RMDashboardView({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner Greeting */}
-      <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
+    <div className="rm-dashboard space-y-5">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded bg-[#eaf3fb] px-2 py-0.5 text-[10px] font-bold text-[#00529b] border border-blue-200">
-              <UserCheck size={11} /> Relationship Manager
-            </span>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs font-semibold text-slate-500">Bank BRI KCP Iskandar Palembang</span>
-          </div>
-          <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+          <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#00529b]/70">
+            {periodRange.label}
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-[22px]">
             {greeting}, {rmName}
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {formatDate(today, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · Jadwal dan realisasi minggu {periodRange.label}.
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Jadwal dan aktivitas kunjungan minggu ini
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              const previousWeek = new Date(`${periodRange.start}T12:00:00`)
-              previousWeek.setDate(previousWeek.getDate() - 7)
-              setSelectedWeekStart(getWeekDateRange(previousWeek).start)
-            }}
-            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
-            aria-label="Minggu sebelumnya"
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <label className="sr-only" htmlFor="rm-week-start">Pilih minggu</label>
-          <input
-            id="rm-week-start"
-            type="date"
-            value={selectedWeekStart}
-            onChange={(event) => {
-              if (event.target.value) {
-                setSelectedWeekStart(getWeekDateRange(new Date(`${event.target.value}T12:00:00`)).start)
-              }
-            }}
-            className="form-control w-[min(100%,11rem)] flex-1 text-xs py-1.5 sm:w-auto sm:flex-none"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const nextWeek = new Date(`${periodRange.start}T12:00:00`)
-              nextWeek.setDate(nextWeek.getDate() + 7)
-              setSelectedWeekStart(getWeekDateRange(nextWeek).start)
-            }}
-            className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 hover:bg-slate-50"
-            aria-label="Minggu berikutnya"
-          >
-            <ChevronRight size={15} />
-          </button>
+          <div className="flex items-center gap-0.5 rounded-lg border border-slate-200/80 bg-white p-0.5 shadow-[0_1px_1px_rgba(15,23,42,0.03)]">
+            <button
+              type="button"
+              onClick={() => {
+                const previousWeek = new Date(`${periodRange.start}T12:00:00`)
+                previousWeek.setDate(previousWeek.getDate() - 7)
+                setSelectedWeekStart(getWeekDateRange(previousWeek).start)
+              }}
+              className="rounded-md p-2 text-slate-500 transition hover:bg-slate-50 hover:text-[#00529b]"
+              aria-label="Minggu sebelumnya"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <input
+              id="rm-week-start"
+              type="date"
+              value={selectedWeekStart}
+              onChange={(event) => {
+                if (event.target.value) {
+                  setSelectedWeekStart(getWeekDateRange(new Date(`${event.target.value}T12:00:00`)).start)
+                }
+              }}
+              className="form-control w-[min(100%,10.5rem)] border-0 py-1 text-xs shadow-none focus:ring-0"
+              aria-label="Pilih minggu"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const nextWeek = new Date(`${periodRange.start}T12:00:00`)
+                nextWeek.setDate(nextWeek.getDate() + 7)
+                setSelectedWeekStart(getWeekDateRange(nextWeek).start)
+              }}
+              className="rounded-md p-2 text-slate-500 transition hover:bg-slate-50 hover:text-[#00529b]"
+              aria-label="Minggu berikutnya"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
           <button
             type="button"
             onClick={() => onNavigate?.('schedule')}
-            className="button-orange !min-h-[44px] w-full text-xs py-1.5 sm:w-auto"
+            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg bg-[#00529b] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px"
           >
-            <Plus size={14} /> Buat Jadwal
+            <Plus size={15} /> Buat Jadwal
           </button>
         </div>
       </div>
 
-      {/* Urgent Follow-up Alert Banner */}
+      {/* ── Urgent Follow-up Alert ───────────────────────────────────── */}
       {followUpMetrics.urgentCount > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50/80 px-4 py-3 text-xs text-rose-800 shadow-xs">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-700">
-              <Clock3 size={15} />
+        <div className="flex flex-col gap-2 rounded-xl border border-rose-200/80 bg-rose-50/70 px-4 py-2.5 text-xs text-rose-800 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-rose-100 text-rose-600">
+              <Clock3 size={13} strokeWidth={2.2} />
             </span>
-            <div>
-              <p className="font-bold text-rose-900">Perhatian: Ada Tindak Lanjut Mendesak</p>
-              <p className="text-[11px] text-rose-700 mt-0.5">
-                {followUpMetrics.overdueCount > 0 && `${followUpMetrics.overdueCount} terlambat`}
-                {followUpMetrics.overdueCount > 0 && followUpMetrics.todayCount > 0 && ' dan '}
-                {followUpMetrics.todayCount > 0 && `${followUpMetrics.todayCount} jatuh tempo hari ini`}
-                . Segera hubungi nasabah agar tidak terlewat.
-              </p>
-            </div>
+            <span className="leading-relaxed">
+              <strong className="font-semibold">Perhatian:</strong> Ada{' '}
+              {followUpMetrics.overdueCount > 0 && <span className="font-semibold">{followUpMetrics.overdueCount} follow-up terlambat</span>}
+              {followUpMetrics.overdueCount > 0 && followUpMetrics.todayCount > 0 && ' dan '}
+              {followUpMetrics.todayCount > 0 && <span className="font-semibold">{followUpMetrics.todayCount} jatuh tempo hari ini</span>}.
+            </span>
           </div>
           <button
             type="button"
             onClick={() => onNavigate?.('follow-up')}
-            className="shrink-0 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-rose-700 transition"
+            className="shrink-0 self-start rounded-md bg-rose-600 px-2.5 py-1 text-[11px] font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06)] transition hover:bg-rose-700 sm:self-auto"
           >
-            Buka Follow-up
+            Lihat Follow-up
           </button>
         </div>
       )}
 
-      {/* 6 RM KPI Summary Cards */}
-      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 2xl:grid-cols-6">
-        {/* Jadwal Periode */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Jadwal Saya</span>
-            <CalendarDays size={16} className="text-[#00529b]" />
+      {/* ── KPI Cards (4 kartu esensial, ringkas & hemat ruang) ──────── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <MetricCard
+          label="Jadwal Minggu Ini"
+          value={visitMetrics.plannedCount}
+          helper="Rencana kunjungan"
+          icon={CalendarDays}
+          tone="blue"
+          featured
+        />
+        <MetricCard
+          label="Kunjungan Selesai"
+          value={visitMetrics.completedCount}
+          helper="Realisasi kunjungan"
+          icon={CalendarCheck2}
+          tone="emerald"
+        />
+        <MetricCard
+          label="Perlu Tindak Lanjut"
+          value={visitMetrics.rescheduledCount + visitMetrics.notMetCount}
+          helper={`${visitMetrics.rescheduledCount} Reschedule · ${visitMetrics.notMetCount} Tidak ditemui`}
+          icon={RotateCcw}
+          tone="amber"
+        />
+        <MetricCard
+          label="Follow-up Mendesak"
+          value={followUpMetrics.urgentCount}
+          helper={`${followUpMetrics.overdueCount} Terlambat · ${followUpMetrics.todayCount} Hari ini`}
+          icon={Clock3}
+          tone="rose"
+        />
+      </div>
+
+      {/* ── MAIN LAYOUT: Agenda (kiri) + Widgets (kanan) ─────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+        {/* Agenda Kunjungan Hari Ini */}
+        <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <SectionHeader
+            icon={CalendarCheck2}
+            title="Agenda Kunjungan Hari Ini"
+            subtitle={`${todayAppointments.length} agenda · ${formatDate(today)}`}
+            trailing={
+              <button
+                type="button"
+                onClick={() => onNavigate?.('schedule')}
+                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#00529b] transition hover:gap-1.5"
+              >
+                <span>Kalender Lengkap</span>
+                <ChevronRight size={12} />
+              </button>
+            }
+          />
+
+          <div className="divide-y divide-slate-100">
+            {todayAppointments.length > 0 ? (
+              todayAppointments.map((item) => {
+                const customer = customers.find((c) => String(c.id) === String(item.customerId))
+
+                return (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-3 p-4 transition-colors hover:bg-[#f9fbfe] sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="rounded-md border border-[#00529b]/15 bg-[#eaf3fb] px-2 py-0.5 font-mono text-[11px] font-bold text-[#00529b]">
+                          {item.time}
+                        </span>
+                        <span className="truncate text-[13px] font-semibold text-slate-900">
+                          {customer?.name || `Nasabah #${item.customerId}`}
+                        </span>
+                        <StatusBadge status={item.status} />
+                        {item.priority === 'Tinggi' && (
+                          <span className="rounded border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[9.5px] font-bold text-rose-600">
+                            Prioritas
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-1 flex items-center gap-1 truncate text-[11.5px] text-slate-500">
+                        <MapPin size={12} className="shrink-0 text-slate-400" />
+                        {customer?.address || 'Alamat belum diatur'}
+                      </p>
+
+                      <p className="mt-0.5 text-[11px] text-slate-500">
+                        Tujuan: <strong className="font-semibold text-slate-700">{item.purpose}</strong>
+                        {item.notes && <span className="text-slate-400"> · "{item.notes}"</span>}
+                      </p>
+                    </div>
+
+                    <div className="flex w-full shrink-0 items-center justify-end sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => setVisitAppointment(item)}
+                        className="inline-flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg bg-[#00529b] px-4 py-2 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px sm:w-auto"
+                      >
+                        {item.status === 'Execute' ? 'Tahap Administrasi' : item.status === 'Selesai' ? 'Lihat Hasil' : 'Check-in GPS'}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 p-8 text-center">
+                <CalendarCheck2 className="size-8 text-slate-300" />
+                <p className="text-xs font-semibold text-slate-700">Tidak ada agenda kunjungan hari ini</p>
+                <p className="text-[11px] text-slate-400">Buat jadwal baru untuk merencanakan kunjungan nasabah.</p>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{visitMetrics.plannedCount}</p>
-          <p className="mt-1 text-[11px] text-slate-500">{periodRange.label}</p>
         </div>
 
-        {/* Kunjungan Selesai */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Kunjungan Selesai</span>
-            <CalendarCheck2 size={16} className="text-emerald-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-emerald-700">{visitMetrics.completedCount}</p>
-          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Realisasi (Selesai)</p>
-        </div>
+        {/* Right Column: Tindak Lanjut Terdekat */}
+        <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] self-start">
+          <SectionHeader
+            icon={Clock3}
+            title="Tindak Lanjut Terdekat"
+            trailing={
+              <button
+                type="button"
+                onClick={() => onNavigate?.('follow-up')}
+                className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#00529b] transition hover:gap-1.5"
+              >
+                <span>Lihat Semua</span>
+                <ChevronRight size={12} />
+              </button>
+            }
+          />
 
-        {/* Jadwal Mendatang */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Jadwal Mendatang</span>
-            <CalendarClock size={16} className="text-[#00529b]" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{upcomingAppointments.length}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Mulai hari ini</p>
-        </div>
+          <div className="divide-y divide-slate-100">
+            {followUps
+              .filter((f) => f.status === 'Belum Dilakukan')
+              .slice(0, 4)
+              .map((f) => {
+                const cust = customers.find((c) => String(c.id) === String(f.customerId))
+                const { isOverdue, isDueToday } = getFollowUpStatusInfo(f, today)
 
-        {/* Reschedule & Tidak Ditemui */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Perlu Tindak Lanjut</span>
-            <RotateCcw size={16} className="text-amber-600" />
+                return (
+                  <div key={f.id} className="px-4 py-2.5 transition-colors hover:bg-[#f9fbfe]">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="truncate text-[12px] font-semibold text-slate-900">
+                        {cust?.name || f.customerName || 'Nasabah'}
+                      </p>
+                      <span
+                        className={`inline-flex shrink-0 rounded px-1.5 py-0.5 text-[9.5px] font-bold ${isOverdue
+                            ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200/70'
+                            : isDueToday
+                              ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200/70'
+                              : 'bg-slate-50 text-slate-600 ring-1 ring-slate-200/70'
+                          }`}
+                      >
+                        {isOverdue ? 'Terlambat' : isDueToday ? 'Hari Ini' : formatDate(f.date)}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                      {f.type} · "{f.notes}"
+                    </p>
+                  </div>
+                )
+              })}
+            {followUps.filter((f) => f.status === 'Belum Dilakukan').length === 0 && (
+              <div className="flex flex-col items-center gap-1 p-6 text-center">
+                <Clock3 size={18} className="text-slate-300" />
+                <p className="text-[11px] text-slate-400">Semua tindak lanjut telah selesai.</p>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.rescheduledCount + visitMetrics.notMetCount}</p>
-          <p className="mt-1 text-[11px] text-amber-600">{visitMetrics.rescheduledCount} Reschedule · {visitMetrics.notMetCount} Tidak ditemui</p>
-        </div>
-
-        {/* Follow-up Mendesak */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Follow-up Mendesak</span>
-            <Clock3 size={16} className="text-rose-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-rose-700">{followUpMetrics.urgentCount}</p>
-          <p className="mt-1 text-[11px] text-rose-600">{followUpMetrics.overdueCount} Terlambat · {followUpMetrics.todayCount} Hari Ini</p>
-        </div>
-
-        {/* Jadwal yang belum terlaksana */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Belum Terlaksana</span>
-            <CalendarClock size={16} className="text-amber-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.pendingCount}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Terjadwal sampai hari ini</p>
         </div>
       </div>
 
-      {/* Peta Sebaran Lokasi Seluruh Nasabah RM */}
+      {/* ── Customer Distribution Map (proporsional) ─────────────────── */}
       <div id="rm-customer-map" className="scroll-mt-20">
         <CustomerDistributionMap
           customers={customers}
           appointments={appointments}
           isAdmin={false}
           onNavigate={onNavigate}
-          height="430px"
+          height="360px"
         />
-      </div>
-
-      {/* Main Grid: Agenda Hari Ini & Samping Widgets */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left Column (2 Cols): Agenda Kunjungan Hari Ini */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-            <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-3.5 flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-bold text-slate-900">Agenda Kunjungan Hari Ini</h3>
-                <p className="text-xs text-slate-500 mt-0.5 font-mono">
-                  {todayAppointments.length} agenda untuk tanggal {formatDate(today)}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigate?.('schedule')}
-                className="text-xs font-semibold text-[#00529b] hover:underline"
-              >
-                Lihat Kalender Lengkap
-              </button>
-            </div>
-
-            <div className="divide-y divide-slate-100">
-              {todayAppointments.length > 0 ? (
-                todayAppointments.map((item) => {
-                  const customer = customers.find((c) => String(c.id) === String(item.customerId))
-
-                  return (
-                    <div key={item.id} className="p-4 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold text-[#00529b] bg-[#eaf3fb] px-2 py-0.5 rounded">
-                            {item.time}
-                          </span>
-                          <span className="font-bold text-sm text-slate-900 truncate">
-                            {customer?.name || `Nasabah #${item.customerId}`}
-                          </span>
-                          <StatusBadge status={item.status} />
-                          {item.priority === 'Tinggi' && (
-                            <span className="rounded bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-700">
-                              Prioritas
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="mt-1 text-xs text-slate-500 flex items-center gap-1 truncate">
-                          <MapPin size={12} className="shrink-0 text-slate-400" />
-                          {customer?.address || 'Alamat belum diatur'}
-                        </p>
-
-                        <p className="mt-0.5 text-[11px] text-slate-400">
-                          Tujuan: <strong className="text-slate-600 font-medium">{item.purpose}</strong>
-                          {item.notes && ` · Catatan: "${item.notes}"`}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                        <button
-                          type="button"
-                          onClick={() => setVisitAppointment(item)}
-                          className="button-primary text-xs py-1.5"
-                        >
-                          {item.status === 'Execute' ? 'Menunggu Administrasi' : item.status === 'Selesai' ? 'Kunjungan Selesai' : 'Update / Check-in GPS'}
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })
-              ) : (
-                <div className="p-8 text-center text-slate-400 text-xs">
-                  <CalendarCheck2 className="mx-auto size-8 text-slate-300 mb-1" />
-                  <p className="font-semibold text-slate-700">Tidak ada agenda kunjungan hari ini</p>
-                  <p className="mt-0.5 text-slate-400">Buat jadwal baru untuk menjadwalkan kunjungan nasabah.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Column: Tindak Lanjut Terdekat & Kategori Follow-up */}
-        <div className="space-y-4">
-          {/* Tindak Lanjut Terdekat */}
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Tindak Lanjut Terdekat</h3>
-              <button
-                type="button"
-                onClick={() => onNavigate?.('follow-up')}
-                className="text-[11px] font-semibold text-[#00529b] hover:underline"
-              >
-                Lihat Semua
-              </button>
-            </div>
-
-            <div className="mt-3 divide-y divide-slate-100">
-              {followUps
-                .filter((f) => f.status === 'Belum Dilakukan')
-                .slice(0, 4)
-                .map((f) => {
-                  const cust = customers.find((c) => String(c.id) === String(f.customerId))
-                  const { isOverdue, isDueToday } = getFollowUpStatusInfo(f, today)
-
-                  return (
-                    <div key={f.id} className="py-2.5 first:pt-0 last:pb-0">
-                      <div className="flex items-center justify-between">
-                        <p className="font-bold text-xs text-slate-900 truncate">{cust?.name || f.customerName || 'Nasabah'}</p>
-                        <span className={`inline-block rounded px-1.5 py-0.2 text-[9px] font-bold ${
-                          isOverdue ? 'bg-rose-100 text-rose-700' : isDueToday ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
-                        }`}>
-                          {isOverdue ? 'Terlambat' : isDueToday ? 'Hari Ini' : formatDate(f.date)}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                        {f.type} · "{f.notes}"
-                      </p>
-                    </div>
-                  )
-                })}
-              {followUps.filter((f) => f.status === 'Belum Dilakukan').length === 0 && (
-                <p className="py-4 text-center text-xs text-slate-400">Semua tindak lanjut telah selesai.</p>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Support Card */}
-          <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4 text-xs text-slate-700 space-y-2">
-            <div className="flex items-center gap-2 text-[#00529b] font-bold">
-              <ShieldCheck size={16} />
-              <span>Standard Operational Procedure (SOP)</span>
-            </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed">
-              Check-in GPS wajib dilakukan di lokasi nasabah dengan toleransi radius maksimal 100 meter. Perbarui status kunjungan setelah pelaksanaan; uraian aktivitas dan tindak lanjut rinci dicatat di aplikasi Laporan Harian RM.
-            </p>
-          </div>
-        </div>
       </div>
 
       {/* Visit Update Modal */}

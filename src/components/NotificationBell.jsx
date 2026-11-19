@@ -13,7 +13,6 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react'
-import { DEFAULT_SETTINGS } from '../services/notificationService'
 
 /**
  * Notification Bell icon + dropdown panel for the AppShell header.
@@ -242,7 +241,7 @@ function NotificationBell({
               {permission === 'default' && (
                 <div className="flex flex-col gap-2">
                   <p className="text-[11px] text-slate-600">
-                    Aktifkan notifikasi browser agar pengingat kunjungan muncul bahkan saat CallPlan diminimasi.
+                    Aktifkan notifikasi browser agar pengingat kunjungan muncul saat e-VisitBRI diminimasi.
                   </p>
                   <button
                     type="button"
@@ -348,7 +347,7 @@ function NotificationBell({
 
             {/* Honest scope note */}
             <p className="mt-3 text-[10px] leading-4 text-slate-400">
-              ⓘ Pengingat aktif selama CallPlan terbuka di browser. Notifikasi tidak terkirim saat browser ditutup.
+              ⓘ Pengingat aktif selama e-VisitBRI terbuka di browser. Notifikasi tidak terkirim saat browser ditutup.
             </p>
           </div>
         </div>

@@ -24,7 +24,7 @@ function CompleteFollowUpModal({ followUp, customer, onClose, onSubmit }) {
   return (
     <Modal
       title="Selesaikan Tindak Lanjut"
-      description="Tandai tugas follow-up ini sebagai selesai dan catat hasil pertemuan/komunikasi."
+      description="Konfirmasi penyelesaian tindak lanjut nasabah."
       onClose={onClose}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -34,14 +34,16 @@ function CompleteFollowUpModal({ followUp, customer, onClose, onSubmit }) {
           </p>
         )}
 
-        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5 text-xs">
-          <p className="font-semibold text-slate-800">{customer?.name || followUp.customerName || 'Nasabah'}</p>
-          <p className="mt-1 text-slate-500">
-            {followUp.type} · Tanggal: {followUp.date} {followUp.time}
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 text-xs">
+          <p className="font-bold text-slate-900">{customer?.name || followUp.customerName || 'Nasabah'}</p>
+          <p className="mt-0.5 text-slate-500">
+            {followUp.type} · {followUp.date} {followUp.time}
           </p>
-          <p className="mt-2 text-slate-700 italic border-l-2 border-indigo-400 pl-2">
-            "{followUp.notes}"
-          </p>
+          {followUp.notes && (
+            <p className="mt-2 text-slate-700 italic border-l-2 border-[#00529b] pl-2.5">
+              "{followUp.notes}"
+            </p>
+          )}
         </div>
 
         <label className="form-label">
@@ -50,24 +52,24 @@ function CompleteFollowUpModal({ followUp, customer, onClose, onSubmit }) {
             value={resultNotes}
             onChange={(e) => setResultNotes(e.target.value)}
             rows={3}
-            placeholder="Contoh: Nasabah sepakat mengajukan pinjaman, berkas akan diserahkan besok siang..."
+            placeholder="Catatan hasil komunikasi atau kesepakatan dengan nasabah..."
             className="form-control resize-y"
           />
         </label>
 
-        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
+        <div className="sticky bottom-0 -mx-3.5 -mb-3.5 flex flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-white px-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:mb-0 sm:flex-row sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4">
           <button
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
-            className="button-secondary"
+            className="button-secondary !min-h-[44px] w-full sm:w-auto"
           >
             Batal
           </button>
           <button
             type="submit"
             disabled={isSubmitting}
-            className="button-primary inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+            className="button-orange !min-h-[44px] w-full sm:w-auto inline-flex items-center justify-center gap-1.5"
           >
             {isSubmitting ? (
               <>
@@ -75,7 +77,7 @@ function CompleteFollowUpModal({ followUp, customer, onClose, onSubmit }) {
               </>
             ) : (
               <>
-                <CheckCircle2 size={15} /> Selesaikan Sekarang
+                <CheckCircle2 size={15} /> Selesaikan Follow-up
               </>
             )}
           </button>

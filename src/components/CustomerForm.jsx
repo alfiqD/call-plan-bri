@@ -261,48 +261,126 @@ function CustomerForm({ customer, onClose, onSubmit }) {
   }
 
   return (
-    <Modal title={customer ? 'Ubah data nasabah' : 'Tambah nasabah'} description="Simpan informasi kontak yang dibutuhkan untuk perencanaan kunjungan." onClose={onClose}>
+    <Modal
+      title={customer ? 'Edit Data Nasabah' : 'Tambah Nasabah'}
+      description="Lengkapi informasi kontak dan koordinat lokasi nasabah."
+      onClose={onClose}
+    >
       <form onSubmit={submit} className="space-y-4">
-        <label className="form-label">Nama Nasabah
-          <input name="name" value={form.name} onChange={update} required maxLength={150} placeholder="Nama individu atau perusahaan" className="form-control" />
+        <label className="form-label">
+          Nama Nasabah
+          <input
+            name="name"
+            value={form.name}
+            onChange={update}
+            required
+            maxLength={150}
+            placeholder="Nama perorangan atau badan usaha"
+            className="form-control"
+          />
         </label>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="form-label">Jenis Nasabah
+          <label className="form-label">
+            Jenis Nasabah
             <select name="customerKind" value={form.customerKind} onChange={update} className="form-control">
-              <option value="">Pilih jika diketahui</option>
+              <option value="">Pilih jenis nasabah</option>
               <option value="Individu">Individu</option>
               <option value="Badan Usaha">Badan Usaha</option>
             </select>
           </label>
-          <label className="form-label">Jenis Usaha
-            <input name="businessType" value={form.businessType} onChange={update} maxLength={150} placeholder="Opsional — contoh: perdagangan, jasa" className="form-control" />
+          <label className="form-label">
+            Jenis Usaha
+            <input
+              name="businessType"
+              value={form.businessType}
+              onChange={update}
+              maxLength={150}
+              placeholder="Contoh: Perdagangan, Jasa, Kuliner"
+              className="form-control"
+            />
           </label>
         </div>
-        <label className="form-label">Nama PIC
-          <input name="picName" value={form.picName} onChange={update} maxLength={150} placeholder="Nama orang yang menjadi kontak nasabah" className="form-control" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="form-label">
+            Nama PIC / Kontak
+            <input
+              name="picName"
+              value={form.picName}
+              onChange={update}
+              maxLength={150}
+              placeholder="Nama penanggung jawab"
+              className="form-control"
+            />
+          </label>
+          <label className="form-label">
+            Nomor Telepon
+            <input
+              name="phone"
+              value={form.phone}
+              onChange={update}
+              required
+              maxLength={24}
+              placeholder="08xx-xxxx-xxxx"
+              className="form-control"
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label className="form-label">
+            Nomor Rekening
+            <input
+              name="noRekening"
+              value={form.noRekening}
+              onChange={update}
+              maxLength={50}
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Nomor rekening nasabah (opsional)"
+              className="form-control"
+            />
+          </label>
+          <label className="form-label">
+            Status Pinjaman
+            <select name="loanStatus" value={form.loanStatus} onChange={update} className="form-control">
+              <option>Belum ada pinjaman</option>
+              <option>Dalam pengajuan</option>
+              <option>Aktif</option>
+              <option>Perlu tindak lanjut</option>
+              <option>Lunas</option>
+            </select>
+          </label>
+        </div>
+        <label className="form-label">
+          Alamat Usaha / Domisili
+          <textarea
+            name="address"
+            value={form.address}
+            onChange={update}
+            required
+            maxLength={500}
+            rows={2}
+            placeholder="Alamat lengkap nasabah"
+            className="form-control resize-y"
+          />
         </label>
-        <label className="form-label">Nomor telepon
-          <input name="phone" value={form.phone} onChange={update} required maxLength={24} placeholder="08xx-xxxx-xxxx" className="form-control" />
-        </label>
-        <label className="form-label">Nomor rekening
-          <input name="noRekening" value={form.noRekening} onChange={update} maxLength={50} inputMode="numeric" pattern="[0-9]*" placeholder="Opsional — angka rekening nasabah" className="form-control" />
-        </label>
-        <label className="form-label">Alamat Usaha / PIC
-          <textarea name="address" value={form.address} onChange={update} required maxLength={500} rows={2} placeholder="Ketik alamat di Indonesia; titik peta dicari otomatis" className="form-control resize-y" />
-        </label>
-        <label className="form-label">Sumber pencarian alamat
+        <label className="form-label">
+          Penyedia Peta
           <select value={mapProvider} onChange={(event) => setMapProvider(event.target.value)} className="form-control">
-            <option value="google">Google Maps {hasGoogleMapsApiKey() ? '' : '(perlu API key)'}</option>
-            <option value="openstreetmap">OpenStreetMap (gratis)</option>
+            <option value="google">Google Maps {hasGoogleMapsApiKey() ? '' : '(Perlu API Key)'}</option>
+            <option value="openstreetmap">OpenStreetMap</option>
           </select>
         </label>
-        {addressLookup && <p className="text-[10px] leading-4 text-slate-500" role="status">{addressLookup}</p>}
-        <details open={Boolean(form.latitude || form.longitude)} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
-          <summary className="cursor-pointer text-[11px] font-semibold text-slate-700">Titik peta <span className="font-normal text-slate-400">(diperlukan untuk rute dan validasi check-in GPS)</span></summary>
-          <p className="mb-3 mt-2 text-[10px] leading-4 text-slate-500">Titik dicari otomatis saat Anda mengetik alamat. Pilih lokasi yang paling sesuai di peta agar pin tepat di rumah atau tempat usaha nasabah.</p>
+        {addressLookup && <p className="text-[11px] leading-4 text-slate-500" role="status">{addressLookup}</p>}
+        <details open={Boolean(form.latitude || form.longitude)} className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+          <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+            Koordinat GPS Nasabah <span className="font-normal text-slate-400">(Wajib untuk check-in kunjungan)</span>
+          </summary>
+          <p className="mb-3 mt-1.5 text-[11px] leading-4 text-slate-500">
+            Titik koordinat dapat dicari otomatis dari alamat atau ditentukan langsung melalui peta.
+          </p>
           {mapPosition && !isMapOpen && (
             <div className="mb-3 space-y-2">
-              <p className="text-[10px] font-medium text-emerald-700">Titik ditemukan: {form.latitude}, {form.longitude}</p>
+              <p className="text-[11px] font-semibold text-emerald-700">Titik lokasi: {form.latitude}, {form.longitude}</p>
               <Suspense fallback={<div className="flex h-[200px] items-center justify-center rounded-xl bg-slate-100 text-xs text-slate-500"><LoaderCircle className="mr-2 size-4 animate-spin" />Memuat peta...</div>}>
                 {mapProvider === 'google'
                   ? <GoogleMapLocation
@@ -315,8 +393,13 @@ function CustomerForm({ customer, onClose, onSubmit }) {
               </Suspense>
             </div>
           )}
-          <button type="button" onClick={() => { setMapSearchQuery(form.address); setMapSearchStatus(''); setIsMapOpen(true) }} className="button-secondary mb-3 w-full"><MapPin size={14} />Pilih titik di peta</button>
-          {mapPosition && <p className="mb-3 text-[10px] text-emerald-700">Pin tersimpan: {form.latitude}, {form.longitude}</p>}
+          <button
+            type="button"
+            onClick={() => { setMapSearchQuery(form.address); setMapSearchStatus(''); setIsMapOpen(true) }}
+            className="button-secondary !min-h-[44px] mb-3 w-full"
+          >
+            <MapPin size={15} />Pilih Titik di Peta
+          </button>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="form-label">Latitude
               <input type="number" name="latitude" value={form.latitude} onChange={update} min="-90" max="90" step="any" placeholder="-2.9761" className="form-control" />
@@ -326,25 +409,20 @@ function CustomerForm({ customer, onClose, onSubmit }) {
             </label>
           </div>
         </details>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <label className="form-label">Status pinjaman
-            <select name="loanStatus" value={form.loanStatus} onChange={update} className="form-control">
-              <option>Belum ada pinjaman</option>
-              <option>Dalam pengajuan</option>
-              <option>Aktif</option>
-              <option>Perlu tindak lanjut</option>
-              <option>Lunas</option>
-            </select>
-          </label>
-        </div>
         {error && <p className="text-xs text-rose-600" role="alert">{error}</p>}
-        <div className="flex flex-col-reverse justify-end gap-2 border-t border-slate-100 pt-4 sm:flex-row">
-          <button type="button" onClick={onClose} className="button-secondary">Batal</button>
-          <button type="submit" className="button-orange">{customer ? 'Simpan perubahan' : 'Tambah nasabah'}</button>
+        <div className="sticky bottom-0 -mx-3.5 -mb-3.5 flex flex-col-reverse justify-end gap-2 border-t border-slate-100 bg-white px-3.5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 sm:static sm:mx-0 sm:mb-0 sm:flex-row sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4">
+          <button type="button" onClick={onClose} className="button-secondary !min-h-[44px] w-full sm:w-auto">Batal</button>
+          <button type="submit" className="button-orange !min-h-[44px] w-full sm:w-auto">{customer ? 'Simpan Perubahan' : 'Tambah Nasabah'}</button>
         </div>
       </form>
       {isMapOpen && (
-        <Modal title="Pilih titik lokasi nasabah" description="Klik peta untuk menyimpan koordinat dan membaca alamat lengkap dari lokasi tersebut." onClose={() => setIsMapOpen(false)} wide portal>
+        <Modal
+          title="Pilih Titik Lokasi Nasabah"
+          description="Arahkan pin ke lokasi tepat nasabah pada peta."
+          onClose={() => setIsMapOpen(false)}
+          wide
+          portal
+        >
           <div className="space-y-3">
             <div className="flex flex-col gap-2 sm:flex-row">
               <input
@@ -358,12 +436,12 @@ function CustomerForm({ customer, onClose, onSubmit }) {
                   }
                 }}
                 maxLength={500}
-                placeholder="Cari alamat atau tempat di Indonesia..."
+                placeholder="Cari alamat atau nama tempat..."
                 aria-label="Cari lokasi pada peta"
                 className="form-control min-w-0 flex-1"
               />
               <button type="button" onClick={() => void searchMapLocation()} className="button-primary shrink-0">
-                <Search size={14} />Cari lokasi
+                <Search size={14} />Cari Lokasi
               </button>
             </div>
             {mapSearchStatus && <p className="text-xs leading-5 text-slate-600" role="status">{mapSearchStatus}</p>}
@@ -388,14 +466,16 @@ function CustomerForm({ customer, onClose, onSubmit }) {
                 />
                 : <LocationMap position={mapPosition} onPick={selectMapPosition} />}
             </Suspense>
-            <p className="text-[10px] leading-4 text-slate-500">{mapPosition ? `Titik dipilih: ${form.latitude}, ${form.longitude}.` : 'Geser dan perbesar peta, lalu klik tepat pada lokasi nasabah.'} Klik pin untuk mengisi alamat lengkap dengan penyedia yang dipilih.</p>
-            <div className="flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-3">
-              <div className="flex flex-wrap gap-2">
-                <a href={mapLinks.openStreetMap} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />OpenStreetMap</a>
-                <a href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Google Maps</a>
-                {mapLinks.streetView && <a href={mapLinks.streetView} target="_blank" rel="noopener noreferrer" className="button-secondary"><ExternalLink size={14} />Street View</a>}
+            <p className="text-[11px] leading-4 text-slate-500">
+              {mapPosition ? `Titik koordinat: ${form.latitude}, ${form.longitude}.` : 'Geser dan perbesar peta, lalu klik lokasi nasabah.'}
+            </p>
+            <div className="flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap gap-1.5">
+                <a href={mapLinks.openStreetMap} target="_blank" rel="noopener noreferrer" className="button-secondary !min-h-[40px] text-xs"><ExternalLink size={13} />OpenStreetMap</a>
+                <a href={mapLinks.googleMaps} target="_blank" rel="noopener noreferrer" className="button-secondary !min-h-[40px] text-xs"><ExternalLink size={13} />Google Maps</a>
+                {mapLinks.streetView && <a href={mapLinks.streetView} target="_blank" rel="noopener noreferrer" className="button-secondary !min-h-[40px] text-xs"><ExternalLink size={13} />Street View</a>}
               </div>
-              <button type="button" onClick={() => setIsMapOpen(false)} disabled={!mapPosition} className="button-orange disabled:cursor-not-allowed disabled:opacity-50">Gunakan titik ini</button>
+              <button type="button" onClick={() => setIsMapOpen(false)} disabled={!mapPosition} className="button-orange !min-h-[44px] w-full sm:w-auto disabled:cursor-not-allowed disabled:opacity-50">Gunakan Titik Ini</button>
             </div>
           </div>
         </Modal>

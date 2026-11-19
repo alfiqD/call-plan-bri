@@ -3,17 +3,14 @@ import {
   Activity,
   ArrowRight,
   CalendarCheck2,
-  CalendarClock,
   CalendarDays,
   Clock3,
   Eye,
   FileSpreadsheet,
   RotateCcw,
   Shield,
-  ShieldCheck,
   UserCheck,
   UsersRound,
-  XCircle,
 } from 'lucide-react'
 import Modal from '../../components/Modal'
 import StatusBadge from '../../components/StatusBadge'
@@ -34,9 +31,9 @@ const actionLabels = {
   [AUDIT_ACTIONS.UPDATE_JADWAL]: 'Ubah Jadwal',
   [AUDIT_ACTIONS.DELETE_JADWAL]: 'Hapus Jadwal',
   [AUDIT_ACTIONS.CHECK_IN_VISIT]: 'Check-in GPS',
-  [AUDIT_ACTIONS.COMPLETE_VISIT_ADMINISTRATION]: 'Selesaikan Administrasi Kunjungan',
-  visit_administration_completed: 'Selesaikan Administrasi Kunjungan',
-  [AUDIT_ACTIONS.RESCHEDULE_VISIT]: 'Reschedule Kunjungan',
+  [AUDIT_ACTIONS.COMPLETE_VISIT_ADMINISTRATION]: 'Selesaikan Administrasi',
+  visit_administration_completed: 'Selesaikan Administrasi',
+  [AUDIT_ACTIONS.RESCHEDULE_VISIT]: 'Reschedule',
   [AUDIT_ACTIONS.UNMET_VISIT]: 'Tidak Ditemui',
   [AUDIT_ACTIONS.CREATE_FOLLOW_UP]: 'Buat Follow-up',
   [AUDIT_ACTIONS.UPDATE_FOLLOW_UP]: 'Ubah Follow-up',
@@ -55,7 +52,7 @@ const actionColors = {
   [AUDIT_ACTIONS.CREATE_JADWAL]: 'bg-blue-50 text-[#00529b] border-blue-200',
   [AUDIT_ACTIONS.UPDATE_JADWAL]: 'bg-blue-50 text-[#00529b] border-blue-200',
   [AUDIT_ACTIONS.COMPLETE_FOLLOW_UP]: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  [AUDIT_ACTIONS.CANCEL_FOLLOW_UP]: 'bg-slate-100 text-slate-700 border-slate-200',
+  [AUDIT_ACTIONS.CANCEL_FOLLOW_UP]: 'bg-slate-100 text-slate-600 border-slate-200',
   [AUDIT_ACTIONS.DELETE_FOLLOW_UP]: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 
@@ -63,6 +60,62 @@ const MONTH_NAMES = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
   'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
 ]
+
+const TONE = {
+  blue: { icon: 'text-[#00529b]', accent: '#00529b', value: 'text-slate-900' },
+  emerald: { icon: 'text-emerald-600', accent: '#059669', value: 'text-emerald-700' },
+  amber: { icon: 'text-amber-600', accent: '#d97706', value: 'text-amber-700' },
+  rose: { icon: 'text-rose-600', accent: '#e11d48', value: 'text-rose-700' },
+  slate: { icon: 'text-slate-400', accent: '#94a3b8', value: 'text-slate-700' },
+}
+
+function MetricCard({ label, value, helper, icon: Icon, tone = 'blue', featured = false }) {
+  const t = TONE[tone]
+  return (
+    <div
+      className={`group relative flex flex-col justify-between overflow-hidden rounded-xl bg-white p-3.5 transition-all duration-300 hover:-translate-y-0.5 ${featured
+        ? 'border border-[#00529b]/25 shadow-[0_1px_2px_rgba(15,23,42,0.04),0_8px_24px_-12px_rgba(0,82,155,0.25)]'
+        : 'border border-slate-200/80 shadow-[0_1px_2px_rgba(15,23,42,0.04)] hover:border-slate-300/80 hover:shadow-[0_1px_2px_rgba(15,23,42,0.04),0_10px_24px_-16px_rgba(15,23,42,0.18)]'
+        }`}
+    >
+      <span
+        className="pointer-events-none absolute inset-x-0 top-0 h-px opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{ background: `linear-gradient(90deg, transparent, ${t.accent}, transparent)` }}
+      />
+      <div className="flex items-start justify-between gap-2">
+        <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+          {label}
+        </span>
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-slate-100 bg-slate-50/80">
+          <Icon size={13.5} strokeWidth={2.2} className={t.icon} />
+        </span>
+      </div>
+      <div className="mt-1.5">
+        <p className={`text-[26px] leading-none font-bold tabular-nums tracking-tight ${t.value}`}>
+          {value}
+        </p>
+        <p className="mt-1 text-[11px] font-medium text-slate-400">{helper}</p>
+      </div>
+    </div>
+  )
+}
+
+function SectionHeader({ icon: Icon, title, subtitle, trailing }) {
+  return (
+    <div className="flex flex-col gap-2 border-b border-slate-200/80 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-2.5">
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[#00529b]">
+          <Icon size={14} strokeWidth={2.2} />
+        </span>
+        <div>
+          <h3 className="text-[13px] font-bold tracking-tight text-slate-900">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{subtitle}</p>}
+        </div>
+      </div>
+      {trailing && <div className="self-start sm:self-auto">{trailing}</div>}
+    </div>
+  )
+}
 
 function AdminDashboardView({
   customers = [],
@@ -72,10 +125,9 @@ function AdminDashboardView({
 }) {
   const currentDate = useMemo(() => new Date(), [])
   const currentYear = currentDate.getFullYear()
-  const currentMonth = currentDate.getMonth() + 1 // 1-12
+  const currentMonth = currentDate.getMonth() + 1
 
-  // Filters State
-  const [filterMode, setFilterMode] = useState('weekly') // 'monthly', 'weekly', 'custom'
+  const [filterMode, setFilterMode] = useState('weekly')
   const [selectedMonth, setSelectedMonth] = useState(currentMonth)
   const [selectedYear, setSelectedYear] = useState(currentYear)
   const [customStartDate, setCustomStartDate] = useState('')
@@ -86,7 +138,6 @@ function AdminDashboardView({
   const [recentAuditLogs, setRecentAuditLogs] = useState([])
   const [auditLogsError, setAuditLogsError] = useState('')
 
-  // RM Detail Modal
   const [detailRm, setDetailRm] = useState(null)
 
   useEffect(() => {
@@ -125,7 +176,7 @@ function AdminDashboardView({
           setAuditLogsError('')
         }
       } catch (error) {
-        console.error('Gagal memuat aktivitas terbaru untuk dashboard Admin:', error)
+        console.error('Gagal memuat aktivitas terbaru:', error)
         if (isActive) {
           setAuditLogsError(error instanceof Error ? error.message : 'Aktivitas terbaru gagal dimuat.')
         }
@@ -136,7 +187,6 @@ function AdminDashboardView({
     return () => { isActive = false }
   }, [appointments, followUps])
 
-  // Calculate Date Range based on Filter Mode
   const dateRange = useMemo(() => {
     if (filterMode === 'monthly') {
       const start = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
@@ -150,7 +200,6 @@ function AdminDashboardView({
       return { start, end, label: `Minggu Ini (${formatDate(start)} - ${formatDate(end)})` }
     }
 
-    // Custom
     return {
       start: customStartDate || '1970-01-01',
       end: customEndDate || '2099-12-31',
@@ -158,7 +207,6 @@ function AdminDashboardView({
     }
   }, [filterMode, selectedMonth, selectedYear, customStartDate, customEndDate, currentDate])
 
-  // Use approved RM profiles, adding owners of existing activity if a profile is unavailable.
   const rmList = useMemo(() => {
     const map = new Map(rmProfiles.map((profile) => [
       profile.id,
@@ -167,25 +215,24 @@ function AdminDashboardView({
         nama: profile.nama || 'RM',
         email: profile.email || '',
         status: profile.status,
-        wilayah: profile.assigned_area || 'Wilayah belum diatur',
+        wilayah: profile.assigned_area || 'KCP Iskandar Palembang',
       },
     ]))
 
     for (const apt of appointments) {
       if (apt.rmId && !map.has(apt.rmId)) {
-        map.set(apt.rmId, { id: apt.rmId, nama: apt.rmName || `RM #${apt.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'Wilayah belum diatur' })
+        map.set(apt.rmId, { id: apt.rmId, nama: apt.rmName || `RM #${apt.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
       }
     }
     for (const fu of followUps) {
       if (fu.rmId && !map.has(fu.rmId)) {
-        map.set(fu.rmId, { id: fu.rmId, nama: fu.rmName || `RM #${fu.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'Wilayah belum diatur' })
+        map.set(fu.rmId, { id: fu.rmId, nama: fu.rmName || `RM #${fu.rmId.slice(0, 6)}`, email: '', status: 'approved', wilayah: 'KCP Iskandar Palembang' })
       }
     }
 
     return Array.from(map.values())
   }, [rmProfiles, appointments, followUps])
 
-  // Filter Follow-ups by Date Range and RM
   const filteredFollowUps = useMemo(() => {
     return followUps.filter((fu) => {
       const inDate = fu.date >= dateRange.start && fu.date <= dateRange.end
@@ -210,7 +257,6 @@ function AdminDashboardView({
     }).length
   }, [filteredFollowUps, todayIso])
 
-  // RM Performance Rows
   const rmPerformance = useMemo(() => {
     return rmList.map((rm) => {
       const allRmAppointments = appointments.filter((a) => a.rmId === rm.id)
@@ -250,23 +296,27 @@ function AdminDashboardView({
     setSelectedRmId('Semua')
   }
 
+  const kpiMetrics = [
+    { label: 'RM Terdaftar', value: rmList.length, helper: `${rmList.filter((r) => r.status === 'approved').length} aktif`, icon: UsersRound, tone: 'blue', featured: true },
+    { label: 'Total Jadwal', value: visitMetrics.plannedCount, helper: 'Periode ini', icon: CalendarDays, tone: 'blue' },
+    { label: 'Kunjungan Selesai', value: visitMetrics.completedCount, helper: 'Realisasi', icon: CalendarCheck2, tone: 'emerald' },
+    { label: 'Perlu Tindak Lanjut', value: visitMetrics.rescheduledCount + visitMetrics.notMetCount, helper: `${visitMetrics.rescheduledCount} Reschedule · ${visitMetrics.notMetCount} Tidak Ditemui`, icon: RotateCcw, tone: 'amber' },
+    { label: 'FU Terlambat', value: overdueFollowUpCount, helper: 'Perlu tindakan', icon: Clock3, tone: 'rose' },
+  ]
+
   return (
-    <div className="space-y-6">
-      {/* Top Banner Greeting */}
-      <div className="flex flex-col justify-between gap-4 rounded-xl border border-slate-200 bg-white p-5 shadow-xs sm:flex-row sm:items-center">
+    <div className="space-y-5">
+      {/* ── Page Header ─────────────────────────────────────────────── */}
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
-              <ShieldCheck size={11} /> Administrator Portal
-            </span>
-            <span className="text-xs text-slate-400">·</span>
-            <span className="text-xs font-semibold text-slate-500">Bank BRI KCP Iskandar Palembang</span>
-          </div>
-          <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-            Dashboard Monitoring & Kinerja RM
+          <p className="mb-1 text-[10.5px] font-semibold uppercase tracking-[0.14em] text-[#00529b]/70">
+            KCP Iskandar Palembang
+          </p>
+          <h2 className="text-xl font-bold tracking-tight text-slate-900 sm:text-[22px]">
+            Dashboard Monitoring
           </h2>
-          <p className="mt-0.5 text-xs text-slate-500">
-            Monitoring rekapitulasi kunjungan, kepatuhan GPS check-in, dan agenda tindak lanjut seluruh tim.
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            Monitoring jadwal kunjungan, validasi GPS, dan capaian Relationship Manager
           </p>
         </div>
 
@@ -274,69 +324,57 @@ function AdminDashboardView({
           <button
             type="button"
             onClick={() => onNavigate?.('audit-log')}
-            className="button-secondary text-xs"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
           >
             <Shield size={14} /> Audit Log
           </button>
           <button
             type="button"
             onClick={() => onNavigate?.('admin-users')}
-            className="button-secondary text-xs"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
           >
-            <UserCheck size={14} /> Kelola Akun
+            <UserCheck size={14} /> Kelola Pengguna
           </button>
           <button
             type="button"
             onClick={() => onNavigate?.('reports')}
-            className="button-primary text-xs"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-[#00529b] px-3 py-1.5 text-xs font-semibold text-white shadow-[0_1px_1px_rgba(15,23,42,0.06),inset_0_1px_0_rgba(255,255,255,0.14)] transition hover:bg-[#00447f] active:translate-y-px"
           >
-            <FileSpreadsheet size={14} /> Laporan Lengkap
+            <FileSpreadsheet size={14} /> Status Kunjungan
           </button>
         </div>
       </div>
 
-      {/* Period & RM Filter Toolbar */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs space-y-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Mode Selector */}
-          <div className="flex w-full items-center justify-between gap-1 rounded-lg bg-slate-100 p-1 sm:w-fit sm:justify-start">
-            <button
-              type="button"
-              onClick={() => setFilterMode('monthly')}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                filterMode === 'monthly' ? 'bg-white text-[#00529b] shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Bulanan
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterMode('weekly')}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                filterMode === 'weekly' ? 'bg-white text-[#00529b] shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Minggu Ini
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilterMode('custom')}
-              className={`rounded-md px-3 py-1 text-xs font-semibold transition ${
-                filterMode === 'custom' ? 'bg-white text-[#00529b] shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              Rentang Tanggal
-            </button>
+      {/* ── Filter Toolbar ──────────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <div className="flex flex-col gap-3 p-3.5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex w-full items-center gap-0.5 rounded-lg border border-slate-200/80 bg-slate-50 p-0.5 sm:w-fit">
+            {[
+              { id: 'monthly', label: 'Bulanan' },
+              { id: 'weekly', label: 'Minggu Ini' },
+              { id: 'custom', label: 'Rentang Tanggal' },
+            ].map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setFilterMode(item.id)}
+                className={`flex-1 rounded-[6px] px-3 py-1.5 text-[11.5px] font-semibold transition-all sm:flex-none ${filterMode === item.id
+                  ? 'bg-white text-[#00529b] shadow-[0_1px_2px_rgba(15,23,42,0.08)]'
+                  : 'text-slate-500 hover:text-slate-800'
+                  }`}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
 
-          {/* Sub Filters */}
           <div className="flex flex-wrap items-center gap-2">
             {filterMode === 'monthly' && (
               <>
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="form-control text-xs py-1"
+                  className="form-control py-1 text-xs"
                 >
                   {MONTH_NAMES.map((m, idx) => (
                     <option key={m} value={idx + 1}>{m}</option>
@@ -345,7 +383,7 @@ function AdminDashboardView({
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="form-control text-xs py-1"
+                  className="form-control py-1 text-xs"
                 >
                   {[2024, 2025, 2026, 2027].map((yr) => (
                     <option key={yr} value={yr}>{yr}</option>
@@ -360,25 +398,24 @@ function AdminDashboardView({
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="form-control w-full text-xs py-1 sm:w-auto"
+                  className="form-control w-full py-1 text-xs sm:w-auto"
                 />
-                <span className="text-xs text-slate-400">-</span>
+                <span className="text-xs text-slate-400">–</span>
                 <input
                   type="date"
                   value={customEndDate}
                   onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="form-control text-xs py-1"
+                  className="form-control py-1 text-xs sm:w-auto"
                 />
               </div>
             )}
 
-            {/* RM Dropdown */}
             <select
               value={selectedRmId}
               onChange={(e) => setSelectedRmId(e.target.value)}
-              className="form-control text-xs py-1"
+              className="form-control py-1 text-xs"
             >
-              <option value="Semua">Seluruh RM (Kantor)</option>
+              <option value="Semua">Seluruh RM</option>
               {rmList.map((rm) => (
                 <option key={rm.id} value={rm.id}>{rm.nama}</option>
               ))}
@@ -387,197 +424,215 @@ function AdminDashboardView({
             <button
               type="button"
               onClick={handleResetFilters}
-              className="text-xs font-semibold text-[#00529b] hover:underline px-2 py-1"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-[11.5px] font-semibold text-[#00529b] transition hover:bg-[#eaf3fb]"
             >
-              Reset Filter
+              <RotateCcw size={12} /> Reset
             </button>
           </div>
         </div>
 
-        <div className="flex flex-col justify-between gap-1 border-t border-slate-100 pt-2 text-[11px] text-slate-500 sm:flex-row sm:items-center">
-          <span>
-            Periode aktif: <strong className="text-slate-800">{dateRange.label}</strong>
-            {selectedRmId !== 'Semua' && ` · Filter RM: ${rmList.find((r) => r.id === selectedRmId)?.nama || selectedRmId}`}
-          </span>
-          <span className="text-slate-400">Semua metrik dan tabel diselaraskan dengan filter ini</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 bg-[linear-gradient(180deg,#fbfdff_0%,#f8fafc_100%)] px-3.5 py-2 text-[11px] text-slate-500">
+          <CalendarDays size={12} className="text-[#00529b]" />
+          <span>Periode aktif:</span>
+          <strong className="font-semibold text-slate-800">{dateRange.label}</strong>
+          {selectedRmId !== 'Semua' && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span>RM: <span className="font-medium text-slate-700">{rmList.find((r) => r.id === selectedRmId)?.nama || selectedRmId}</span></span>
+            </>
+          )}
         </div>
       </div>
 
       {rmProfilesError && (
         <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" role="status">
-          Profil RM gagal dimuat dari Supabase: {rmProfilesError}. Tabel monitoring hanya dapat menampilkan RM yang ditemukan pada jadwal atau follow-up.
+          Daftar RM gagal dimuat: {rmProfilesError}
         </p>
       )}
 
-      {/* Weekly plan and actual visit counts are reported separately. */}
-      <div className="grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 min-[1400px]:grid-cols-8">
-        {/* Total RM */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">RM Terdaftar</span>
-            <UsersRound size={16} className="text-[#00529b]" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{rmList.length}</p>
-          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">{rmList.filter((r) => r.status === 'approved').length} RM Aktif</p>
+      {/* ── KPI Metric Cards (5 kartu esensial, ringkas & hemat ruang) ──────── */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
+        {kpiMetrics.map((m) => (
+          <MetricCard key={m.label} {...m} />
+        ))}
+      </div>
+
+      {/* ── MAIN LAYOUT: Map (kiri) + Aktivitas (kanan) ──────────────── */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.65fr)_minmax(0,1fr)]">
+        {/* Map — tinggi terkontrol, tidak lagi mendominasi */}
+        <div className="min-w-0">
+          <CustomerDistributionMap
+            customers={customers}
+            appointments={appointments}
+            isAdmin={true}
+            onNavigate={onNavigate}
+            height="380px"
+          />
         </div>
 
-        {/* Planned appointments */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Jadwal Direncanakan</span>
-            <CalendarDays size={16} className="text-[#00529b]" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-slate-900">{visitMetrics.plannedCount}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Periode ini</p>
-        </div>
+        {/* Aktivitas Terkini — kolom kanan, scrollable */}
+        <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+          <SectionHeader
+            icon={Activity}
+            title="Aktivitas Terkini"
+            subtitle="Log audit terbaru dari aktivitas pengguna"
+          />
 
-        {/* Actual visits */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Realisasi (Selesai)</span>
-            <CalendarCheck2 size={16} className="text-emerald-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-emerald-700">{visitMetrics.completedCount}</p>
-          <p className="mt-1 text-[11px] text-emerald-600 font-semibold">Check-in selesai pada periode</p>
-        </div>
+          {auditLogsError && (
+            <p className="border-b border-amber-100 bg-amber-50 px-4 py-2 text-[11px] text-amber-800" role="status">
+              Gagal dimuat: {auditLogsError}
+            </p>
+          )}
 
-        {/* Visits not yet completed */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Belum Terlaksana</span>
-            <CalendarClock size={16} className="text-amber-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.pendingCount}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Status Terjadwal</p>
-        </div>
+          <div className="flex-1 divide-y divide-slate-100 xl:max-h-[380px] xl:overflow-y-auto">
+            {recentAuditLogs.length > 0 ? (
+              recentAuditLogs.map((log) => {
+                const label = actionLabels[log.action] || log.action
+                const badgeStyle = actionColors[log.action] || 'bg-slate-100 text-slate-700 border-slate-200'
+                const formattedTime = new Date(log.createdAt).toLocaleTimeString('id-ID', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })
+                const formattedDate = formatDate(log.createdAt.slice(0, 10))
 
-        {/* Reschedule */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Reschedule</span>
-            <RotateCcw size={16} className="text-amber-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-amber-700">{visitMetrics.rescheduledCount}</p>
-          <p className="mt-1 text-[11px] text-amber-600">Jadwal ulang</p>
-        </div>
+                const detailSummary = (() => {
+                  if (log.action === AUDIT_ACTIONS.RESCHEDULE_VISIT) {
+                    return `Reschedule jadwal ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ke ${log.details?.newDate ? formatDate(log.details.newDate) : ''} ${log.details?.newTime || ''}`
+                  }
+                  if (log.action === AUDIT_ACTIONS.DELETE_JADWAL) {
+                    return `Hapus jadwal ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''}`
+                  }
+                  if (log.action === AUDIT_ACTIONS.CHECK_IN_VISIT) {
+                    return `Check-in GPS divalidasi (jarak ${log.details?.distanceMeters ?? '±0'} m)`
+                  }
+                  if (log.action === AUDIT_ACTIONS.CREATE_JADWAL) {
+                    return `Jadwal baru: ${log.details?.date ? formatDate(log.details.date) : ''} ${log.details?.time || ''}`
+                  }
+                  if (log.action === AUDIT_ACTIONS.COMPLETE_FOLLOW_UP) {
+                    return `Follow-up selesai ${log.details?.resultNotes ? `— "${log.details.resultNotes}"` : ''}`
+                  }
+                  if (log.action === AUDIT_ACTIONS.CANCEL_FOLLOW_UP) {
+                    return 'Follow-up dibatalkan'
+                  }
+                  if (log.action === AUDIT_ACTIONS.DELETE_FOLLOW_UP) {
+                    return 'Follow-up dihapus'
+                  }
+                  return log.details?.customerName || log.details?.nama || log.entityType
+                })()
 
-        {/* Tidak Ditemui */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Tidak Ditemui</span>
-            <XCircle size={16} className="text-rose-600" />
+                return (
+                  <div key={log.id} className="flex items-start gap-2.5 px-4 py-2.5 transition-colors hover:bg-[#f9fbfe]">
+                    <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[9px] font-bold text-[#00529b]">
+                      {log.actorName ? log.actorName.slice(0, 2).toUpperCase() : 'RM'}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[12px] font-semibold text-slate-900">{log.actorName}</span>
+                        <span className={`inline-flex items-center rounded border px-1 py-px text-[9.5px] font-semibold ${badgeStyle}`}>
+                          {label}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-slate-500">{detailSummary}</p>
+                      <p className="mt-0.5 text-[10px] tabular-nums text-slate-400">
+                        {formattedDate} · {formattedTime} WIB
+                      </p>
+                    </div>
+                  </div>
+                )
+              })
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 p-8 text-center">
+                <Activity size={18} className="text-slate-300" />
+                <p className="text-[11px] text-slate-400">Belum ada aktivitas tercatat.</p>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-2xl font-black text-rose-700">{visitMetrics.notMetCount}</p>
-          <p className="mt-1 text-[11px] text-rose-600">Perlu kunjungan ulang</p>
-        </div>
 
-        {/* Historical cancellations remain visible as their own outcome. */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Batal</span>
-            <XCircle size={16} className="text-slate-500" />
+          <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-2">
+            <button
+              type="button"
+              onClick={() => onNavigate?.('audit-log')}
+              className="inline-flex w-full items-center justify-center gap-1 text-[11.5px] font-semibold text-[#00529b] transition hover:gap-1.5"
+            >
+              <span>Buka Seluruh Audit Log</span>
+              <ArrowRight size={12} />
+            </button>
           </div>
-          <p className="mt-2 text-2xl font-black text-slate-700">{visitMetrics.cancelledCount}</p>
-          <p className="mt-1 text-[11px] text-slate-500">Tidak dihitung sebagai jadwal aktif</p>
-        </div>
-
-        {/* Follow-up Terlambat */}
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-slate-500">Follow-up Terlambat</span>
-            <Clock3 size={16} className="text-rose-600" />
-          </div>
-          <p className="mt-2 text-2xl font-black text-rose-700">{overdueFollowUpCount}</p>
-          <p className="mt-1 text-[11px] text-slate-400">Butuh eskalasi</p>
         </div>
       </div>
 
-      {/* Peta Sebaran Lokasi Seluruh Nasabah (Admin Monitoring) */}
-      <CustomerDistributionMap
-        customers={customers}
-        appointments={appointments}
-        isAdmin={true}
-        onNavigate={onNavigate}
-        height="460px"
-      />
-
-      {/* RM Performance Table */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-3.5 flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Tabel Kinerja & Capaian Kunjungan Relationship Manager</h3>
-            <p className="mt-0.5 text-xs text-slate-500">
-              Jadwal yang direncanakan dan realisasi check-in dihitung terpisah untuk setiap RM.
-            </p>
-          </div>
-          <span className="text-xs font-medium text-slate-500">Periode: {dateRange.label}</span>
-        </div>
+      {/* ── RM Performance Table ─────────────────────────────────────── */}
+      <div className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+        <SectionHeader
+          icon={UsersRound}
+          title="Kinerja Relationship Manager"
+          subtitle="Rekapitulasi jadwal dan realisasi kunjungan pada periode aktif"
+          trailing={
+            <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-600 shadow-[0_1px_1px_rgba(15,23,42,0.03)]">
+              <CalendarDays size={11} className="text-[#00529b]" />
+              {dateRange.label}
+            </span>
+          }
+        />
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full min-w-[900px] text-left">
             <thead>
-              <tr className="border-b border-slate-200 text-[11px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-50/50">
-                <th className="px-5 py-3">Nama Relationship Manager</th>
-                <th className="px-4 py-3">Wilayah Tugas</th>
-                <th className="px-4 py-3 text-center">Jadwal</th>
-                <th className="px-4 py-3 text-center">Realisasi</th>
-                <th className="px-4 py-3 text-center">Belum Terlaksana</th>
-                <th className="px-4 py-3 text-center">Reschedule</th>
-                <th className="px-4 py-3 text-center">Tidak Ditemui</th>
-                <th className="px-4 py-3 text-center">Batal</th>
-                <th className="px-4 py-3 text-center">FU Terlambat</th>
-                <th className="px-5 py-3 text-right">Aksi</th>
+              <tr className="border-b border-slate-200/80 bg-slate-50/60 text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">
+                <th className="px-5 py-2.5">Nama RM</th>
+                <th className="px-4 py-2.5">Wilayah</th>
+                <th className="px-4 py-2.5 text-center">Jadwal</th>
+                <th className="px-4 py-2.5 text-center">Selesai</th>
+                <th className="px-4 py-2.5 text-center">Belum</th>
+                <th className="px-4 py-2.5 text-center">Reschedule</th>
+                <th className="px-4 py-2.5 text-center">Tidak Ditemui</th>
+                <th className="px-4 py-2.5 text-center">Batal</th>
+                <th className="px-4 py-2.5 text-center">FU Terlambat</th>
+                <th className="px-5 py-2.5 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs">
               {rmPerformance.map((row) => (
-                <tr key={row.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="px-5 py-3.5">
+                <tr key={row.id} className="group transition-colors hover:bg-[#f9fbfe]">
+                  <td className="px-5 py-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
+                      <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[#00529b]/15 bg-[#eaf3fb] text-[10px] font-bold text-[#00529b]">
                         {row.nama.slice(0, 2).toUpperCase()}
                       </span>
-                      <div>
-                        <p className="font-bold text-slate-900">{row.nama}</p>
-                        <p className="text-[11px] text-slate-500 font-mono">{row.email || '-'}</p>
+                      <div className="min-w-0">
+                        <p className="truncate text-[12.5px] font-semibold text-slate-900">{row.nama}</p>
+                        <p className="truncate font-mono text-[10.5px] text-slate-400">{row.email || '-'}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3.5 text-slate-600">
-                    {row.wilayah}
+                  <td className="px-4 py-3">
+                    <span className="inline-flex items-center rounded-md border border-slate-200/80 bg-slate-50 px-1.5 py-0.5 text-[10.5px] font-medium text-slate-600">
+                      {row.wilayah}
+                    </span>
                   </td>
-                  <td className="px-4 py-3.5 text-center font-bold text-slate-800">
-                    {row.plannedCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-bold text-emerald-700 bg-emerald-50/30">
-                    {row.completedCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-semibold text-amber-700">
-                    {row.pendingCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-semibold text-amber-700">
-                    {row.rescheduledCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-semibold text-rose-700">
-                    {row.notMetCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center font-semibold text-slate-600">
-                    {row.cancelledCount}
-                  </td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                      row.overdue > 0 ? 'bg-rose-100 text-rose-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
+                  <td className="px-4 py-3 text-center text-[12.5px] font-bold tabular-nums text-slate-800">{row.plannedCount}</td>
+                  <td className="px-4 py-3 text-center text-[12.5px] font-bold tabular-nums text-emerald-700">{row.completedCount}</td>
+                  <td className="px-4 py-3 text-center text-[12.5px] font-semibold tabular-nums text-amber-700">{row.pendingCount}</td>
+                  <td className="px-4 py-3 text-center text-[12.5px] font-semibold tabular-nums text-amber-700">{row.rescheduledCount}</td>
+                  <td className="px-4 py-3 text-center text-[12.5px] font-semibold tabular-nums text-rose-700">{row.notMetCount}</td>
+                  <td className="px-4 py-3 text-center text-[12.5px] tabular-nums text-slate-500">{row.cancelledCount}</td>
+                  <td className="px-4 py-3 text-center">
+                    <span
+                      className={`inline-flex min-w-[22px] justify-center rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums ${row.overdue > 0
+                        ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200/70'
+                        : 'bg-slate-50 text-slate-500 ring-1 ring-slate-200/70'
+                        }`}
+                    >
                       {row.overdue}
                     </span>
                   </td>
-                  <td className="px-5 py-3.5 text-right">
+                  <td className="px-5 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => setDetailRm(row)}
-                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-blue-50 hover:text-[#00529b]"
+                      className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[11.5px] font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
                     >
-                      <Eye size={13} /> Lihat Detail
+                      <Eye size={12} /> Detail
                     </button>
                   </td>
                 </tr>
@@ -587,167 +642,51 @@ function AdminDashboardView({
         </div>
       </div>
 
-      {/* Aktivitas Terkini RM (Live Audit Log Preview) */}
-      <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
-        <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-blue-100 text-[#00529b]">
-              <Activity size={16} />
-            </span>
-            <div>
-              <h3 className="text-sm font-bold text-slate-900">Aktivitas Terkini Relationship Manager (Audit Log)</h3>
-              <p className="text-xs text-slate-500">
-                Pemantauan langsung tindakan RM: reschedule, hapus jadwal, check-in GPS, dan tindak lanjut nasabah.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => onNavigate?.('audit-log')}
-            className="inline-flex items-center gap-1.5 self-start sm:self-auto rounded-lg border border-[#00529b] bg-white px-3 py-1.5 text-xs font-semibold text-[#00529b] hover:bg-blue-50 transition shadow-2xs"
-          >
-            <span>Buka Seluruh Audit Log</span>
-            <ArrowRight size={13} />
-          </button>
-        </div>
-
-        {auditLogsError && (
-          <p className="border-b border-amber-100 bg-amber-50 px-5 py-2 text-xs text-amber-800" role="status">
-            Aktivitas terbaru gagal dimuat: {auditLogsError}
-          </p>
-        )}
-
-        <div className="divide-y divide-slate-100">
-          {recentAuditLogs.length > 0 ? (
-            recentAuditLogs.map((log) => {
-              const label = actionLabels[log.action] || log.action
-              const badgeStyle = actionColors[log.action] || 'bg-slate-100 text-slate-700 border-slate-200'
-              const formattedTime = new Date(log.createdAt).toLocaleTimeString('id-ID', {
-                hour: '2-digit',
-                minute: '2-digit',
-              })
-              const formattedDate = formatDate(log.createdAt.slice(0, 10))
-
-              const detailSummary = (() => {
-                if (log.action === AUDIT_ACTIONS.RESCHEDULE_VISIT) {
-                  return `Reschedule jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ke ${log.details?.newDate ? formatDate(log.details.newDate) : ''} pukul ${log.details?.newTime || ''} ${log.details?.notes ? `— "${log.details.notes}"` : ''}`
-                }
-                if (log.action === AUDIT_ACTIONS.DELETE_JADWAL) {
-                  return `Menghapus jadwal kunjungan ${log.details?.customerName ? `nasabah ${log.details.customerName}` : ''} ${log.details?.reason ? `(${log.details.reason})` : ''}`
-                }
-                if (log.action === AUDIT_ACTIONS.CHECK_IN_VISIT) {
-                  return `Check-in GPS berhasil divalidasi (jarak ${log.details?.distanceMeters ?? '±0'} meter dari titik nasabah)`
-                }
-                if (log.action === AUDIT_ACTIONS.CREATE_JADWAL) {
-                  return `Membuat jadwal kunjungan baru pada ${log.details?.date ? formatDate(log.details.date) : ''} pukul ${log.details?.time || ''}`
-                }
-                if (log.action === AUDIT_ACTIONS.COMPLETE_FOLLOW_UP) {
-                  return `Menyelesaikan follow-up nasabah ${log.details?.resultNotes ? `— "${log.details.resultNotes}"` : ''}`
-                }
-                if (log.action === AUDIT_ACTIONS.CANCEL_FOLLOW_UP) {
-                  return 'Membatalkan tindak lanjut nasabah'
-                }
-                if (log.action === AUDIT_ACTIONS.DELETE_FOLLOW_UP) {
-                  return 'Menghapus item follow-up nasabah'
-                }
-                return log.details?.customerName || log.details?.nama || log.entityType
-              })()
-
-              return (
-                <div key={log.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3 hover:bg-slate-50/70 transition">
-                  <div className="flex items-start gap-3 min-w-0">
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#eaf3fb] text-[10px] font-bold text-[#00529b] mt-0.5">
-                      {log.actorName ? log.actorName.slice(0, 2).toUpperCase() : 'RM'}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs font-bold text-slate-900">{log.actorName}</span>
-                        <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold border ${badgeStyle}`}>
-                          {label}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {log.actorEmail}
-                        </span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-slate-600 truncate">
-                        {detailSummary}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-left sm:text-right">
-                    <span className="text-[11px] font-semibold text-slate-700 block">{formattedTime} WIB</span>
-                    <span className="text-[10px] text-slate-400 block">{formattedDate}</span>
-                  </div>
-                </div>
-              )
-            })
-          ) : (
-            <div className="p-6 text-center text-xs text-slate-400">
-              Belum ada aktivitas tercatat hari ini.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* RM Detail Performance Modal */}
+      {/* ── RM Detail Modal ──────────────────────────────────────────── */}
       {detailRm && (
         <Modal
-          title={`Detail Kinerja RM: ${detailRm.nama}`}
-          description={`Rincian agenda dan aktivitas pada periode ${dateRange.label}`}
+          title={`Detail Kinerja: ${detailRm.nama}`}
+          description={`Aktivitas pada periode ${dateRange.label}`}
           onClose={() => setDetailRm(null)}
           wide
         >
           <div className="space-y-4">
-            {/* RM Summary Stats */}
-            <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-center text-xs sm:grid-cols-6">
-              <div>
-                <p className="text-[10px] text-slate-400">Jadwal</p>
-                <p className="text-base font-bold text-slate-900 mt-0.5">{detailRm.plannedCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-emerald-600">Realisasi</p>
-                <p className="text-base font-bold text-emerald-700 mt-0.5">{detailRm.completedCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-amber-600">Belum Terlaksana</p>
-                <p className="text-base font-bold text-amber-700 mt-0.5">{detailRm.pendingCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-amber-600">Reschedule</p>
-                <p className="text-base font-bold text-amber-700 mt-0.5">{detailRm.rescheduledCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-rose-600">Tidak Ditemui</p>
-                <p className="text-base font-bold text-rose-700 mt-0.5">{detailRm.notMetCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-slate-500">Batal</p>
-                <p className="text-base font-bold text-slate-700 mt-0.5">{detailRm.cancelledCount}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-rose-600">FU Terlambat</p>
-                <p className="text-base font-bold text-rose-700 mt-0.5">{detailRm.overdue}</p>
-              </div>
+            <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-center text-xs sm:grid-cols-7">
+              {[
+                { label: 'Jadwal', value: detailRm.plannedCount, cls: 'text-slate-900', sub: 'text-slate-500' },
+                { label: 'Selesai', value: detailRm.completedCount, cls: 'text-emerald-700', sub: 'text-emerald-600' },
+                { label: 'Belum', value: detailRm.pendingCount, cls: 'text-amber-700', sub: 'text-amber-600' },
+                { label: 'Reschedule', value: detailRm.rescheduledCount, cls: 'text-amber-700', sub: 'text-amber-600' },
+                { label: 'Tidak Ditemui', value: detailRm.notMetCount, cls: 'text-rose-700', sub: 'text-rose-600' },
+                { label: 'Batal', value: detailRm.cancelledCount, cls: 'text-slate-700', sub: 'text-slate-500' },
+                { label: 'FU Terlambat', value: detailRm.overdue, cls: 'text-rose-700', sub: 'text-rose-600' },
+              ].map((s) => (
+                <div key={s.label} className="bg-white px-2 py-2.5">
+                  <p className={`text-[10px] font-medium ${s.sub}`}>{s.label}</p>
+                  <p className={`mt-0.5 text-[15px] font-bold tabular-nums ${s.cls}`}>{s.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* List of Visits in Period */}
             <div>
-              <h4 className="text-xs font-bold text-slate-800 mb-2">Daftar Kunjungan Nasabah pada Periode Ini:</h4>
-              <div className="max-h-56 overflow-y-auto space-y-2 pr-1">
+              <h4 className="mb-2 text-xs font-bold tracking-tight text-slate-800">Daftar Kunjungan Nasabah</h4>
+              <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
                 {detailRm.appointments.length > 0 ? (
                   detailRm.appointments.map((apt) => {
                     const cust = customers.find((c) => String(c.id) === String(apt.customerId))
                     return (
-                      <div key={apt.id} className="flex flex-col justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs sm:flex-row sm:items-center">
+                      <div
+                        key={apt.id}
+                        className="flex flex-col justify-between gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs transition hover:border-[#00529b]/25 hover:bg-[#f9fbfe] sm:flex-row sm:items-center"
+                      >
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900">{cust?.name || `Nasabah #${apt.customerId}`}</p>
-                          <p className="text-[11px] text-slate-500 font-mono">{formatDate(apt.date)} · {apt.time} · {apt.purpose}</p>
-                          {apt.notes && <p className="mt-1 max-w-xl text-[11px] text-slate-600">{apt.notes}</p>}
+                          <p className="font-semibold text-slate-900">{cust?.name || `Nasabah #${apt.customerId}`}</p>
+                          <p className="text-[11px] text-slate-500">{formatDate(apt.date)} · {apt.time} · {apt.purpose}</p>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <StatusBadge status={apt.status} />
                           {apt.checkInDistanceMeters !== undefined && apt.checkInDistanceMeters !== null && (
-                            <span className="text-[10px] text-emerald-600 font-semibold font-mono">
+                            <span className="font-mono text-[10px] font-semibold text-emerald-600">
                               ±{apt.checkInDistanceMeters}m
                             </span>
                           )}
@@ -756,17 +695,13 @@ function AdminDashboardView({
                     )
                   })
                 ) : (
-                  <p className="text-xs text-slate-400 text-center py-4">Tidak ada kunjungan pada periode ini.</p>
+                  <p className="py-4 text-center text-xs text-slate-400">Tidak ada kunjungan pada periode ini.</p>
                 )}
               </div>
             </div>
 
             <div className="flex justify-end border-t border-slate-100 pt-3">
-              <button
-                type="button"
-                onClick={() => setDetailRm(null)}
-                className="button-secondary"
-              >
+              <button type="button" onClick={() => setDetailRm(null)} className="button-secondary">
                 Tutup
               </button>
             </div>

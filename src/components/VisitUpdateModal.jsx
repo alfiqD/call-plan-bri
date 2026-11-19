@@ -85,16 +85,18 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
   const [followUpType, setFollowUpType] = useState('Melengkapi Dokumen')
 
   // Calculated distance & GPS validation
+  const customerLat = customer?.latitude
+  const customerLng = customer?.longitude
   const gpsValidation = useMemo(() => {
-    if (!gpsFix || !hasCustomerCoordinates) return null
+    if (!gpsFix || !hasCustomerCoordinates || customerLat == null || customerLng == null) return null
     return validateCheckInLocation({
-      customerLat: customer.latitude,
-      customerLng: customer.longitude,
+      customerLat,
+      customerLng,
       rmLat: gpsFix.latitude,
       rmLng: gpsFix.longitude,
       accuracy: gpsFix.accuracy,
     })
-  }, [gpsFix, hasCustomerCoordinates, customer?.latitude, customer?.longitude])
+  }, [gpsFix, hasCustomerCoordinates, customerLat, customerLng])
 
   // Acquire GPS fix with stabilization
   const fetchGpsCoordinates = async () => {
@@ -121,7 +123,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
     if (status === 'Execute' && appointment.status !== 'Execute' && !gpsFix && !isGpsLoading && hasCustomerCoordinates) {
       fetchGpsCoordinates()
     }
-  }, [status, hasCustomerCoordinates, appointment.status])
+  }, [status, hasCustomerCoordinates, appointment.status, gpsFix, isGpsLoading])
 
   // Form Submit Handler
   const submit = async (event) => {
@@ -226,28 +228,28 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
   return (
     <Modal
       title="Update Hasil Kunjungan"
-      description="Catat status hasil kunjungan serta validasi lokasi GPS/check-in."
+      description="Perbarui status hasil kunjungan dan validasi check-in GPS."
       onClose={onClose}
     >
       <form onSubmit={submit} className="space-y-4">
         {/* Customer & Appointment Info Header */}
-        <div className="rounded-xl border border-slate-100 bg-slate-50 p-3.5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{customer?.name || 'Nasabah'}</p>
-              {customer?.picName && <p className="mt-0.5 text-[11px] text-slate-600">PIC: {customer.picName}</p>}
+              <p className="text-sm font-bold text-slate-900 truncate">{customer?.name || 'Nasabah'}</p>
+              {customer?.picName && <p className="mt-0.5 text-xs text-slate-600">PIC: {customer.picName}</p>}
               {customer?.phone && (
-                <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="mt-0.5 inline-flex text-[11px] text-[#00529b] hover:underline">
-                  No. HP: {customer.phone}
+                <a href={`tel:${customer.phone.replace(/[^\d+]/g, '')}`} className="mt-0.5 inline-flex text-xs text-[#00529b] hover:underline">
+                  No. Telepon: {customer.phone}
                 </a>
               )}
-              <p className="mt-0.5 text-[11px] text-slate-500">
+              <p className="mt-0.5 text-xs text-slate-500">
                 RM: {currentUser.nama} · {appointment.date} · {appointment.time}
               </p>
-              <p className="mt-0.5 text-[11px] text-slate-500">{appointment.purpose}</p>
+              <p className="mt-0.5 text-xs font-medium text-slate-700">{appointment.purpose}</p>
               {customer?.address && (
-                <p className="mt-1 flex items-start gap-1 text-[11px] text-slate-600 line-clamp-1">
-                  <MapPin className="mt-0.5 size-3 shrink-0 text-slate-400" />
+                <p className="mt-1 flex items-start gap-1 text-xs text-slate-600 line-clamp-1">
+                  <MapPin className="mt-0.5 size-3.5 shrink-0 text-slate-400" />
                   <span>{customer.address}</span>
                 </p>
               )}
@@ -255,17 +257,17 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
             <StatusBadge status={appointment.status} />
           </div>
           {appointment.status === 'Execute' && (
-            <p className="mt-2 border-t border-slate-200 pt-2 text-[11px] text-slate-600">
+            <p className="mt-2.5 border-t border-slate-200 pt-2 text-xs text-slate-600">
               {isAdmin
-                ? 'Kunjungan sedang dalam tahap administrasi. Tandai Selesai setelah proses administrasi rampung.'
-                : 'Kunjungan sudah dikirim ke tahap administrasi dan menunggu penyelesaian oleh Admin.'}
+                ? 'Kunjungan dalam tahap administrasi. Tandai Selesai setelah verifikasi berkas rampung.'
+                : 'Kunjungan telah dikirim ke tahap administrasi dan menunggu penyelesaian Admin.'}
             </p>
           )}
         </div>
 
         {/* Status Selection */}
         <fieldset>
-          <legend className="mb-2 text-xs font-semibold text-slate-700">Status hasil kunjungan</legend>
+          <legend className="mb-2 text-xs font-semibold text-slate-700">Pilih Status Kunjungan</legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {outcomes.map((outcome) => {
               const isSelected = status === outcome
@@ -276,8 +278,8 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                   onClick={() => setStatus(outcome)}
                   className={`min-h-[44px] rounded-lg border px-2.5 py-2.5 text-xs font-semibold transition text-center ${
                     isSelected
-                      ? 'border-[#00529b] bg-blue-50/70 text-[#00529b] ring-2 ring-blue-100 font-bold'
-                      : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                      ? 'border-[#00529b] bg-[#eaf3fb] text-[#00529b] ring-1 ring-blue-200 font-bold'
+                      : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                   }`}
                 >
                   {outcome}
@@ -289,9 +291,9 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
 
         {/* Reschedule Inputs */}
         {status === 'Reschedule' && (
-          <div className="grid grid-cols-1 gap-3 rounded-xl border border-amber-200 bg-amber-50/40 p-3.5 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 rounded-xl border border-amber-200 bg-amber-50/50 p-3.5 sm:grid-cols-2">
             <label className="form-label text-amber-950">
-              Jadwal baru
+              Tanggal Baru
               <input
                 type="date"
                 value={newDate}
@@ -301,7 +303,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
               />
             </label>
             <label className="form-label text-amber-950">
-              Jam baru
+              Jam Baru
               <input
                 type="time"
                 value={newTime}
@@ -315,7 +317,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
 
         {/* GPS Check-In Section */}
         {status === 'Execute' && appointment.status !== 'Execute' && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50/50 p-4 space-y-3">
+          <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4 space-y-3">
             <div className="flex flex-col items-stretch justify-between gap-2 border-b border-blue-100 pb-2.5 sm:flex-row sm:items-center">
               <div className="flex items-center gap-2">
                 <LocateFixed className="size-4 text-[#00529b]" />
@@ -325,16 +327,16 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                 type="button"
                 onClick={fetchGpsCoordinates}
                 disabled={isGpsLoading}
-                className="inline-flex min-h-[44px] items-center justify-center gap-1 rounded-md border border-blue-200 bg-white px-2 py-2 text-[11px] font-semibold text-[#00529b] shadow-2xs hover:bg-blue-50 transition disabled:opacity-50 sm:min-h-9"
+                className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-[#00529b] shadow-2xs hover:bg-blue-50 transition disabled:opacity-50"
               >
                 {isGpsLoading ? (
                   <>
-                    <LoaderCircle size={12} className="animate-spin" />
-                    <span>Mendeteksi...</span>
+                    <LoaderCircle size={14} className="animate-spin" />
+                    <span>Mendeteksi Lokasi...</span>
                   </>
                 ) : (
                   <>
-                    <RotateCcw size={12} />
+                    <RotateCcw size={14} />
                     <span>Ambil Ulang Lokasi</span>
                   </>
                 )}
@@ -345,16 +347,16 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
               <div className="rounded-lg bg-amber-100/70 p-3 text-xs text-amber-800 flex items-start gap-2">
                 <AlertCircle className="size-4 shrink-0 mt-0.5 text-amber-600" />
                 <div>
-                  <p className="font-semibold">Titik koordinat nasabah belum ditentukan pada peta.</p>
+                  <p className="font-semibold">Koordinat GPS nasabah belum ditentukan pada peta.</p>
                   <p className="mt-0.5 text-[11px]">
-                    Check-in untuk mengirim kunjungan ke tahap administrasi mewajibkan validasi radius 100 meter. Perbarui data nasabah lalu tandai titik lokasinya di peta terlebih dahulu.
+                    Validasi check-in memerlukan titik lokasi nasabah. Buka form edit nasabah untuk menandai titik di peta terlebih dahulu.
                   </p>
                 </div>
               </div>
             ) : isGpsLoading ? (
               <div className="py-3 text-center text-xs text-slate-600 flex items-center justify-center gap-2">
                 <LoaderCircle size={16} className="animate-spin text-[#00529b]" />
-                <span>Memperoleh koordinat satelit GPS dengan akurasi tinggi...</span>
+                <span>Mendeteksi koordinat satelit GPS...</span>
               </div>
             ) : gpsError ? (
               <div className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700 flex items-start gap-2 border border-rose-200">
@@ -390,12 +392,12 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                       ±{gpsValidation.accuracy} meter
                     </span>
                     <span className="text-[10px] text-slate-400 block mt-0.5">
-                      {gpsValidation.accuracy <= 30 ? 'Sangat akurat' : gpsValidation.accuracy <= 100 ? 'Cukup akurat' : 'Akurasi buruk'}
+                      {gpsValidation.accuracy <= 30 ? 'Sangat akurat' : gpsValidation.accuracy <= 100 ? 'Cukup akurat' : 'Akurasi rendah'}
                     </span>
                   </div>
                 </div>
 
-                <div className="text-[11px] text-slate-500 font-mono bg-white/70 px-2.5 py-1.5 rounded border border-slate-200 truncate">
+                <div className="text-[11px] text-slate-500 font-mono bg-white/80 px-2.5 py-1.5 rounded border border-slate-200 truncate">
                   Koordinat: {gpsFix.latitude.toFixed(6)}, {gpsFix.longitude.toFixed(6)}
                 </div>
 
@@ -412,7 +414,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                   <div className="rounded-lg bg-rose-50 border border-rose-200 p-2.5 text-xs text-rose-700 flex items-start gap-1.5">
                     <XCircle className="size-4 shrink-0 text-rose-600 mt-0.5" />
                     <span>
-                      Check-in ditolak karena berjarak {gpsValidation.distanceMeters} meter dari titik nasabah (maksimal {MAX_CHECK_IN_RADIUS_METERS} meter).
+                      Check-in ditolak: Anda berada {gpsValidation.distanceMeters} meter dari titik nasabah (maksimal {MAX_CHECK_IN_RADIUS_METERS} meter).
                     </span>
                   </div>
                 )}
@@ -430,21 +432,21 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
 
         {/* Optional GPS for Unmet visits */}
         {status === 'Tidak ditemui' && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3.5 text-xs">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3.5 text-xs">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-slate-700">Bukti Lokasi GPS (Opsional)</span>
               <button
                 type="button"
                 onClick={fetchGpsCoordinates}
                 disabled={isGpsLoading}
-                className="inline-flex items-center gap-1 rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
+                className="inline-flex min-h-[40px] items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
               >
-                {isGpsLoading ? <LoaderCircle size={12} className="animate-spin" /> : <RotateCcw size={12} />}
-                <span>{gpsFix ? 'Perbarui Titik GPS' : 'Ambil Titik Lokasi Saya'}</span>
+                {isGpsLoading ? <LoaderCircle size={14} className="animate-spin" /> : <RotateCcw size={14} />}
+                <span>{gpsFix ? 'Perbarui Titik GPS' : 'Ambil Titik Lokasi'}</span>
               </button>
             </div>
             <p className="mt-1 text-[11px] text-slate-500">
-              Jika Anda telah berada di lokasi namun nasabah tidak dapat ditemui, Anda dapat merekam koordinat GPS sebagai bukti kedatangan.
+              Koordinat GPS dapat disimpan sebagai bukti kedatangan ke lokasi nasabah.
             </p>
             {gpsFix && (
               <p className="mt-2 text-[11px] text-emerald-700 font-medium flex items-center gap-1">
@@ -456,7 +458,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
 
         {/* Reschedule or Batal notice */}
         {(status === 'Reschedule' || status === 'Batal') && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-[11px] text-slate-500 flex items-center gap-1.5">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-3 text-xs text-slate-500 flex items-center gap-1.5">
             <Info size={14} className="shrink-0 text-slate-400" />
             <span>Validasi lokasi GPS tidak diwajibkan untuk status {status.toLowerCase()}.</span>
           </div>
@@ -475,7 +477,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
           </label>
           {createFollowUp && (
             <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-2.5 border-t border-blue-100">
-              <label className="text-[11px] font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-slate-700">
                 Tanggal Follow-up
                 <input
                   type="date"
@@ -485,7 +487,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
                   className="form-control mt-1 text-xs"
                 />
               </label>
-              <label className="text-[11px] font-semibold text-slate-700">
+              <label className="text-xs font-semibold text-slate-700">
                 Jenis Tindak Lanjut
                 <select
                   value={followUpType}
@@ -530,7 +532,7 @@ function VisitUpdateModal({ appointment, customer, onClose, onSubmit, onSchedule
             {isSaving ? (
               <>
                 <LoaderCircle size={14} className="animate-spin" />
-                <span>Menyimpan Status Kunjungan...</span>
+                <span>Menyimpan...</span>
               </>
             ) : (
               <span>{status === 'Selesai' ? 'Selesaikan Administrasi' : status === 'Execute' ? 'Kirim ke Tahap Administrasi' : 'Simpan Status Kunjungan'}</span>

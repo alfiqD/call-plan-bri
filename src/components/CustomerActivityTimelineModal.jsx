@@ -4,15 +4,10 @@ import {
   CalendarCheck2,
   CalendarClock,
   CheckCircle2,
-  Clock,
-  FileText,
   MapPin,
-  MessageSquare,
   Phone,
-  PhoneCall,
   Plus,
   RotateCcw,
-  UserCheck,
   XCircle,
 } from 'lucide-react'
 import Modal from './Modal'
@@ -177,13 +172,13 @@ function CustomerActivityTimelineModal({
   return (
     <Modal
       title={`Riwayat Aktivitas: ${customer.name}`}
-      description="Kronologi terpadu kunjungan lapangan dan tindak lanjut nasabah"
+      description="Kronologi kunjungan lapangan dan tindak lanjut nasabah."
       onClose={onClose}
       wide
     >
       <div className="space-y-4">
         {/* Customer Header Info */}
-        <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/80 p-4 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-slate-900">{customer.name}</span>
@@ -197,10 +192,10 @@ function CustomerActivityTimelineModal({
               {customer.address}
             </p>
             {(customer.picName || customer.customerKind || customer.businessType) && (
-              <div className="mt-1 space-y-0.5 text-[11px] text-slate-500">
-                {customer.picName && <p>PIC: {customer.picName}</p>}
-                {customer.customerKind && <p>Jenis Nasabah: {customer.customerKind}</p>}
-                {customer.businessType && <p>Jenis Usaha: {customer.businessType}</p>}
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+                {customer.picName && <span>PIC: <strong className="font-semibold text-slate-700">{customer.picName}</strong></span>}
+                {customer.customerKind && <span>Jenis: {customer.customerKind}</span>}
+                {customer.businessType && <span>Usaha: {customer.businessType}</span>}
               </div>
             )}
           </div>
@@ -346,7 +341,7 @@ function CustomerActivityTimelineModal({
         </div>
 
         <div className="flex justify-end border-t border-slate-100 pt-3">
-          <button type="button" onClick={onClose} className="button-secondary">
+          <button type="button" onClick={onClose} className="button-secondary !min-h-[44px] w-full sm:w-auto">
             Tutup
           </button>
         </div>

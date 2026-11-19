@@ -8,7 +8,6 @@ import {
   requestPermission,
   saveSettings,
   sendTestNotification,
-  DEFAULT_SETTINGS,
 } from '../services/notificationService'
 
 const CHECK_INTERVAL_MS = 60 * 1000 // Check every 60 seconds

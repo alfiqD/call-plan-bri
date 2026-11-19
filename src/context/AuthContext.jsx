@@ -3,41 +3,6 @@ import { isSupabaseConfigured, supabase } from '../services/supabase'
 import { AuthContext } from './authContextInstance'
 import { AUDIT_ACTIONS, ENTITY_TYPES, recordAuditEvent } from '../services/auditLog'
 
-const DEMO_STORAGE_KEY = 'call-plan-demo-session'
-
-const DEMO_USERS = {
-  rm: {
-    user: {
-      id: 'rm-01',
-      email: 'rm.ahmad@bri.co.id',
-      user_metadata: { full_name: 'Ahmad Fauzi' },
-    },
-    profile: {
-      id: 'rm-01',
-      nama: 'Ahmad Fauzi',
-      email: 'rm.ahmad@bri.co.id',
-      role: 'rm',
-      status: 'approved',
-      assigned_area: 'Palembang',
-    },
-  },
-  admin: {
-    user: {
-      id: 'admin-01',
-      email: 'admin.iskandar@bri.co.id',
-      user_metadata: { full_name: 'Administrator Cabang' },
-    },
-    profile: {
-      id: 'admin-01',
-      nama: 'Administrator Cabang',
-      email: 'admin.iskandar@bri.co.id',
-      role: 'admin',
-      status: 'approved',
-      assigned_area: 'Palembang',
-    },
-  },
-}
-
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(null)
   const [user, setUser] = useState(null)
@@ -87,30 +52,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true
 
-    // Check if there is a local demo session stored
-    const checkDemoSession = () => {
-      try {
-        if (typeof window !== 'undefined') {
-          const raw = window.localStorage.getItem(DEMO_STORAGE_KEY)
-          if (raw) {
-            const parsed = JSON.parse(raw)
-            if (parsed?.user && parsed?.profile) {
-              setSession({ access_token: 'demo-token', user: parsed.user })
-              setUser(parsed.user)
-              setProfile(parsed.profile)
-              setIsLoading(false)
-              return true
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Gagal membaca demo session:', err)
-      }
-      return false
-    }
-
     if (!isSupabaseConfigured() || !supabase) {
-      checkDemoSession()
       if (isMounted) setIsLoading(false)
       return undefined
     }
@@ -130,9 +72,7 @@ export function AuthProvider({ children }) {
         if (isMounted) setProfile(userProfile)
         if (isMounted) setIsLoading(false)
       } else {
-        // If no active Supabase session, check if demo session exists
-        const hasDemo = checkDemoSession()
-        if (!hasDemo && isMounted) {
+        if (isMounted) {
           setSession(null)
           setUser(null)
           setProfile(null)
@@ -150,13 +90,9 @@ export function AuthProvider({ children }) {
         const userProfile = await fetchProfile(newSession.user.id, newSession.user.email)
         if (isMounted) setProfile(userProfile)
       } else {
-        // If Supabase signed out, check if user switched to demo or is logged out
-        const rawDemo = typeof window !== 'undefined' ? window.localStorage.getItem(DEMO_STORAGE_KEY) : null
-        if (!rawDemo) {
-          setSession(null)
-          setUser(null)
-          setProfile(null)
-        }
+        setSession(null)
+        setUser(null)
+        setProfile(null)
       }
       if (isMounted) setIsLoading(false)
     })
@@ -204,53 +140,23 @@ export function AuthProvider({ children }) {
     }
   }, [fetchProfile])
 
-  const signInDemo = (role = 'rm') => {
-    const demo = DEMO_USERS[role] || DEMO_USERS.rm
-    const dummySession = {
-      access_token: 'demo-token',
-      user: demo.user,
-    }
-    if (typeof window !== 'undefined') {
-      window.localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify({ role, user: demo.user, profile: demo.profile }))
-    }
-    setSession(dummySession)
-    setUser(demo.user)
-    setProfile(demo.profile)
-    setAuthError('')
-
-    void recordAuditEvent({
-      action: AUDIT_ACTIONS.LOGIN,
-      entityType: ENTITY_TYPES.AUTH,
-      entityId: demo.user.id,
-      actor: demo.profile,
-      details: {
-        mode: 'demo',
-        role,
-        client: 'Web Internal Bank BRI',
-      },
-    })
-
-    return { session: dummySession, user: demo.user }
-  }
-
   const signIn = async (email, password, rememberMe = true) => {
     setAuthError('')
     const cleanEmail = email.trim().toLowerCase()
 
-    // Shortcut: If testing with demo emails
-    if (cleanEmail === 'rm.demo@bri.co.id' || cleanEmail === 'rm@bri.co.id') {
-      return signInDemo('rm')
-    }
-    if (cleanEmail === 'admin.demo@bri.co.id' || cleanEmail === 'admin@bri.co.id') {
-      return signInDemo('admin')
+    if (!cleanEmail || !password) {
+      const err = new Error('Email dan kata sandi wajib diisi.')
+      setAuthError(err.message)
+      throw err
     }
 
     if (!isSupabaseConfigured() || !supabase) {
-      throw new Error('Supabase belum terhubung. Anda dapat menggunakan tombol Demo Login Cepat (RM / Admin) untuk menguji aplikasi.')
+      const err = new Error('Koneksi ke server Supabase belum terkonfigurasi. Hubungi Administrator sistem.')
+      setAuthError(err.message)
+      throw err
     }
 
     if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(DEMO_STORAGE_KEY)
       if (rememberMe) {
         window.sessionStorage.removeItem('cp_session_only')
       } else {
@@ -265,11 +171,6 @@ export function AuthProvider({ children }) {
     if (error) {
       setAuthError(error.message)
       throw error
-    }
-
-    // Clean any demo session if logging in with real Supabase
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(DEMO_STORAGE_KEY)
     }
 
     setSession(data.session)
@@ -351,7 +252,7 @@ export function AuthProvider({ children }) {
       if (typeof window !== 'undefined') {
         try {
           window.sessionStorage.removeItem('cp_session_only')
-          window.localStorage.removeItem(DEMO_STORAGE_KEY)
+          window.localStorage.removeItem('call-plan-demo-session')
           for (const storage of [window.localStorage, window.sessionStorage]) {
             Object.keys(storage).forEach((key) => {
               if (key.startsWith('sb-') && key.endsWith('-auth-token')) {
@@ -394,7 +295,6 @@ export function AuthProvider({ children }) {
     authError,
     isConfigured: isSupabaseConfigured(),
     signIn,
-    signInDemo,
     signUp,
     signOut,
     resetPassword,
