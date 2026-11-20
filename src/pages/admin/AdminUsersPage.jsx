@@ -30,6 +30,43 @@ function RoleBadge({ role }) {
   )
 }
 
+function JenisRmBadge({ role, jenisRm }) {
+  if (role === 'admin') {
+    return <span className="text-[11px] text-slate-400 font-mono">-</span>
+  }
+
+  if (jenisRm === 'RMFT') {
+    return (
+      <span
+        className="inline-flex items-center rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-sky-700"
+        title="Relationship Manager Funding & Transaction"
+      >
+        RMFT
+      </span>
+    )
+  }
+
+  if (jenisRm === 'RMSME') {
+    return (
+      <span
+        className="inline-flex items-center rounded border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-bold tracking-wide text-indigo-700"
+        title="Relationship Manager Small Medium Enterprise"
+      >
+        RMSME
+      </span>
+    )
+  }
+
+  return (
+    <span
+      className="inline-flex items-center rounded border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500"
+      title="Belum Ditentukan"
+    >
+      Belum Ditentukan
+    </span>
+  )
+}
+
 function StatusBadge({ status }) {
   return (
     <span
@@ -102,17 +139,29 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
           .update({
             role: targetRole,
             status: targetStatus,
+            ...(targetRole === 'admin' ? { jenis_rm: null } : {}),
             approved_at: targetStatus === 'approved' ? new Date().toISOString() : null,
           })
           .eq('id', userId)
 
         if (directErr) throw directErr
+      } else if (targetRole === 'admin') {
+        // Double safety: pastikan kolom jenis_rm di profiles di-set ke null bahkan jika RPC di database belum diperbarui
+        const { error: cleanErr } = await supabase
+          .from('profiles')
+          .update({ jenis_rm: null })
+          .eq('id', userId)
+
+        if (cleanErr) {
+          console.warn('Peringatan reset jenis_rm:', cleanErr.message)
+        }
       }
 
       setUsers((current) => current.map((u) => u.id === userId ? {
         ...u,
         role: targetRole,
         status: targetStatus,
+        jenis_rm: targetRole === 'admin' ? null : u.jenis_rm,
       } : u))
 
       const action = targetStatus === 'approved'
@@ -141,7 +190,11 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
     return users.filter((u) => {
       const matchesStatus = filterStatus === 'Semua' || u.status === filterStatus
       const q = searchQuery.toLowerCase()
-      const matchesSearch = (u.nama?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+      const matchesSearch = (
+        u.nama?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.jenis_rm?.toLowerCase().includes(q)
+      )
       return matchesStatus && matchesSearch
     })
   }, [users, filterStatus, searchQuery])
@@ -243,6 +296,7 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
                 <th className="px-5 py-2.5">Nama Pengguna</th>
                 <th className="px-4 py-2.5">Email</th>
                 <th className="px-4 py-2.5">Role</th>
+                <th className="px-4 py-2.5">Jenis RM</th>
                 <th className="px-4 py-2.5">Status</th>
                 <th className="px-4 py-2.5">Wilayah</th>
                 <th className="px-5 py-2.5 text-right">Tindakan</th>
@@ -266,6 +320,9 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
                     </td>
                     <td className="px-4 py-3">
                       <RoleBadge role={u.role} />
+                    </td>
+                    <td className="px-4 py-3">
+                      <JenisRmBadge role={u.role} jenisRm={u.jenis_rm} />
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={u.status} />
@@ -337,7 +394,7 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
 
               {!filteredUsers.length && !loading && (
                 <tr>
-                  <td colSpan="6" className="py-12 text-center">
+                  <td colSpan="7" className="py-12 text-center">
                     <ShieldAlert className="mx-auto mb-1.5 size-8 text-slate-300" />
                     <p className="text-xs text-slate-400">Tidak ada pengguna yang sesuai dengan filter.</p>
                   </td>
@@ -373,6 +430,12 @@ function AdminUsersPage({ onNotify, isAdmin, onNavigate }) {
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500">
                     <StatusBadge status={u.status} />
+                    {u.role === 'rm' && (
+                      <>
+                        <span className="text-slate-300">•</span>
+                        <JenisRmBadge role={u.role} jenisRm={u.jenis_rm} />
+                      </>
+                    )}
                     <span className="text-slate-300">•</span>
                     <span>{u.assigned_area || 'KCP Iskandar Palembang'}</span>
                   </div>

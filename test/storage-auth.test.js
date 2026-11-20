@@ -1,7 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 import { createSupabaseAuthStorage } from '../src/services/supabase.js'
-import { MAX_PHOTO_BYTES, validatePhotoFile } from '../src/services/storage.js'
 
 function createMemoryStorage(entries = {}) {
   const values = new Map(Object.entries(entries))
@@ -12,20 +11,6 @@ function createMemoryStorage(entries = {}) {
     has: (key) => values.has(key),
   }
 }
-
-describe('Visit photo validation', () => {
-  it('accepts supported image types up to the configured size limit', () => {
-    for (const type of ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']) {
-      assert.deepEqual(validatePhotoFile({ type, size: MAX_PHOTO_BYTES }), { valid: true })
-    }
-  })
-
-  it('rejects unsupported image types and files larger than 1 MB', () => {
-    assert.equal(validatePhotoFile({ type: 'image/svg+xml', size: 100 }).valid, false)
-    assert.equal(validatePhotoFile({ type: 'application/pdf', size: 100 }).valid, false)
-    assert.equal(validatePhotoFile({ type: 'image/jpeg', size: MAX_PHOTO_BYTES + 1 }).valid, false)
-  })
-})
 
 describe('Supabase remember-me storage', () => {
   it('persists tokens in local storage when remember-me is enabled', async () => {

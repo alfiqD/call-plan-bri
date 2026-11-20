@@ -575,7 +575,8 @@ function AdminDashboardView({
           }
         />
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden overflow-x-auto xl:block">
           <table className="w-full min-w-[900px] text-left">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/60 text-[10px] font-bold uppercase tracking-[0.06em] text-slate-500">
@@ -639,6 +640,93 @@ function AdminDashboardView({
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile & Tablet RM Card List View ───────────────────────── */}
+        <div className="block space-y-3 p-3 sm:p-4 bg-slate-50/50 xl:hidden">
+          {rmPerformance.length > 0 ? (
+            rmPerformance.map((row) => (
+              <div
+                key={row.id}
+                className="overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-slate-300/80"
+              >
+                <div className="p-3.5 sm:p-4">
+                  <div className="flex flex-col gap-2 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#00529b]/15 bg-[#eaf3fb] text-[11px] font-bold text-[#00529b]">
+                        {row.nama.slice(0, 2).toUpperCase()}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[13px] font-semibold text-slate-900">{row.nama}</p>
+                        <p className="truncate font-mono text-[10.5px] text-slate-400">{row.email || '-'}</p>
+                      </div>
+                    </div>
+                    <span className="self-start min-[420px]:self-auto inline-flex shrink-0 items-center rounded-md border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-[10.5px] font-medium text-slate-600">
+                      {row.wilayah}
+                    </span>
+                  </div>
+
+                  {/* Ringkasan Metrik Kunjungan */}
+                  <div className="mt-3 grid grid-cols-2 gap-1.5 rounded-lg border border-slate-100 bg-slate-50/70 p-2 sm:grid-cols-4">
+                    <div className="rounded-md bg-white p-2 text-center shadow-[0_1px_1px_rgba(15,23,42,0.02)]">
+                      <span className="block text-[10px] font-medium text-slate-500">Jadwal</span>
+                      <span className="mt-0.5 block text-sm font-bold tabular-nums text-slate-800">{row.plannedCount}</span>
+                    </div>
+                    <div className="rounded-md bg-white p-2 text-center shadow-[0_1px_1px_rgba(15,23,42,0.02)]">
+                      <span className="block text-[10px] font-medium text-emerald-600">Selesai</span>
+                      <span className="mt-0.5 block text-sm font-bold tabular-nums text-emerald-700">{row.completedCount}</span>
+                    </div>
+                    <div className="rounded-md bg-white p-2 text-center shadow-[0_1px_1px_rgba(15,23,42,0.02)]">
+                      <span className="block text-[10px] font-medium text-amber-600">Belum</span>
+                      <span className="mt-0.5 block text-sm font-semibold tabular-nums text-amber-700">{row.pendingCount}</span>
+                    </div>
+                    <div className="rounded-md bg-white p-2 text-center shadow-[0_1px_1px_rgba(15,23,42,0.02)]">
+                      <span className="block text-[10px] font-medium text-amber-600">Reschedule</span>
+                      <span className="mt-0.5 block text-sm font-semibold tabular-nums text-amber-700">{row.rescheduledCount}</span>
+                    </div>
+                  </div>
+
+                  {/* Metrik Pengecualian & Follow-up */}
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                    <span className="inline-flex items-center gap-1 rounded border border-rose-200/80 bg-rose-50/60 px-2 py-0.5 text-rose-700">
+                      <span className="text-[10px] text-rose-600/90">Tidak Ditemui:</span>
+                      <strong className="font-semibold tabular-nums">{row.notMetCount}</strong>
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded border border-slate-200/80 bg-slate-50 px-2 py-0.5 text-slate-600">
+                      <span className="text-[10px] text-slate-500">Batal:</span>
+                      <strong className="font-semibold tabular-nums">{row.cancelledCount}</strong>
+                    </span>
+                    <span
+                      className={`inline-flex items-center gap-1 rounded px-2 py-0.5 ${
+                        row.overdue > 0
+                          ? 'border border-rose-300 bg-rose-50 font-bold text-rose-700 ring-1 ring-rose-200/70'
+                          : 'border border-slate-200/80 bg-slate-50 text-slate-500'
+                      }`}
+                    >
+                      <span className="text-[10px]">FU Terlambat:</span>
+                      <strong className="tabular-nums">{row.overdue}</strong>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-end border-t border-slate-100 bg-slate-50/60 px-3.5 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setDetailRm(row)}
+                    className="inline-flex min-h-[40px] w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:translate-y-px sm:w-auto"
+                  >
+                    <Eye size={13} className="text-[#00529b]" />
+                    <span>Detail Kinerja</span>
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="flex flex-col items-center gap-1.5 rounded-xl border border-slate-200/80 bg-white p-8 text-center shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+              <UsersRound size={20} className="text-slate-300" />
+              <p className="text-[11.5px] text-slate-400">Tidak ada data Relationship Manager pada periode ini.</p>
+            </div>
+          )}
         </div>
       </div>
 

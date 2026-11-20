@@ -4,15 +4,14 @@ import {
   CalendarDays,
   CalendarPlus,
   ChevronDown,
-  Home,
   LogOut,
-  Map,
   Menu,
   Shield,
-  UsersRound,
   X,
 } from 'lucide-react'
 import Sidebar from './Sidebar'
+import RMBottomNav from './RMBottomNav'
+import RMProfileModal from './RMProfileModal'
 import NotificationBell from './NotificationBell'
 import NotificationSettingsModal from './NotificationSettingsModal'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
@@ -38,6 +37,7 @@ function AppShell({
   const { user, profile, role, signOut } = useAuth()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [mobileMapActive, setMobileMapActive] = useState(false)
+  const [profileModalOpen, setProfileModalOpen] = useState(false)
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
   const [settingsModalOpen, setSettingsModalOpen] = useState(false)
   const [logoutModalOpen, setLogoutModalOpen] = useState(false)
@@ -62,11 +62,13 @@ function AppShell({
 
   const navigate = (page) => {
     setMobileMapActive(false)
+    setProfileModalOpen(false)
     onNavigate(page)
     setMobileMenuOpen(false)
   }
 
   const navigateToMap = () => {
+    setProfileModalOpen(false)
     setMobileMapActive(true)
     onNavigate('dashboard')
     setMobileMenuOpen(false)
@@ -104,7 +106,11 @@ function AppShell({
     .map((w) => w[0].toUpperCase())
     .join('') || 'RM'
 
-  const roleLabel = role === 'admin' ? 'Admin' : 'RM'
+  const roleLabel = role === 'admin'
+    ? 'Admin'
+    : profile?.jenis_rm
+      ? `RM ${profile.jenis_rm}`
+      : 'RM'
   const roleBadgeStyle = role === 'admin'
     ? 'bg-amber-50 text-amber-700 border-amber-200'
     : 'bg-blue-50 text-[#00529b] border-blue-200'
@@ -367,39 +373,29 @@ function AppShell({
 
         {/* ── Bottom Navigation (RM) ─────────────────────────────────── */}
         {role === 'rm' && (
-          <nav
-            aria-label="Navigasi bawah"
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] shadow-[0_-4px_16px_-4px_rgba(15,23,42,0.08)] backdrop-blur-sm lg:hidden"
-          >
-            <div className="grid h-14 grid-cols-5">
-              {[
-                { label: 'Home', icon: Home, active: activePage === 'dashboard' && !mobileMapActive, onClick: () => { navigate('dashboard'); window.scrollTo({ top: 0, behavior: 'smooth' }) } },
-                { label: 'Peta', icon: Map, active: activePage === 'dashboard' && mobileMapActive, onClick: navigateToMap },
-                { label: 'Jadwal', icon: CalendarDays, active: activePage === 'schedule', onClick: () => navigate('schedule') },
-                { label: 'Nasabah', icon: UsersRound, active: activePage === 'customers', onClick: () => navigate('customers') },
-                { label: 'Menu', icon: Menu, active: mobileMenuOpen || !['dashboard', 'schedule', 'customers'].includes(activePage), onClick: () => setMobileMenuOpen(true) },
-              ].map(({ label, icon: Icon, active, onClick }) => (
-                <button
-                  key={label}
-                  type="button"
-                  onClick={onClick}
-                  aria-label={label}
-                  aria-current={active ? 'page' : undefined}
-                  aria-expanded={label === 'Menu' ? mobileMenuOpen : undefined}
-                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-[10px] font-semibold transition-colors ${active
-                    ? 'text-[#00529b]'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
-                    }`}
-                >
-                  {active && (
-                    <span className="absolute inset-x-1/2 top-0 h-0.5 w-8 -translate-x-1/2 rounded-full bg-[#00529b] shadow-[0_1px_4px_rgba(0,82,155,0.4)]" />
-                  )}
-                  <Icon size={18} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" className={active ? 'text-[#00529b]' : ''} />
-                  <span className="truncate">{label}</span>
-                </button>
-              ))}
-            </div>
-          </nav>
+          <RMBottomNav
+            activePage={activePage}
+            mobileMapActive={mobileMapActive}
+            isProfileOpen={profileModalOpen}
+            onNavigate={navigate}
+            onNavigateToMap={navigateToMap}
+            onOpenProfile={() => setProfileModalOpen(true)}
+            urgentFollowUpCount={urgentFollowUpCount}
+          />
+        )}
+
+        {/* ── RM Profile Bottom Sheet Modal ─────────────────────────── */}
+        {role === 'rm' && (
+          <RMProfileModal
+            isOpen={profileModalOpen}
+            onClose={() => setProfileModalOpen(false)}
+            user={user}
+            profile={profile}
+            onNavigate={navigate}
+            urgentFollowUpCount={urgentFollowUpCount}
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenLogout={() => setLogoutModalOpen(true)}
+          />
         )}
 
         {/* ── Notification Settings Modal ───────────────────────────── */}

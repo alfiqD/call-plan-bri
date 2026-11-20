@@ -18,6 +18,7 @@ function RegisterPage({ onNavigate }) {
   const { signUp, isConfigured } = useAuth()
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [jenisRm, setJenisRm] = useState('RMFT')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -52,6 +53,11 @@ function RegisterPage({ onNavigate }) {
       return
     }
 
+    if (!jenisRm || !['RMFT', 'RMSME'].includes(jenisRm)) {
+      setError('Pilih jenis spesialisasi Relationship Manager (RMFT atau RMSME).')
+      return
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(cleanEmail)) {
       setError('Format email tidak valid (contoh: nama@bri.co.id).')
@@ -70,7 +76,7 @@ function RegisterPage({ onNavigate }) {
 
     setLoading(true)
     try {
-      await signUp(cleanEmail, password, cleanFullName)
+      await signUp(cleanEmail, password, cleanFullName, jenisRm)
       setSuccess(true)
     } catch (err) {
       console.error('Pendaftaran gagal:', err)
@@ -172,6 +178,87 @@ function RegisterPage({ onNavigate }) {
                   />
                 </div>
               </label>
+
+              {/* Pilihan Jenis RM (Wajib) */}
+              <div>
+                <span className="block text-xs font-semibold text-slate-700">
+                  Jenis Relationship Manager <span className="text-rose-500">*</span>
+                </span>
+                <p className="mt-0.5 text-[11px] text-slate-500">
+                  Pilih divisi penugasan spesialisasi Anda di Bank BRI.
+                </p>
+                <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <label
+                    className={`relative flex cursor-pointer flex-col rounded-lg border p-3 transition-all ${
+                      jenisRm === 'RMFT'
+                        ? 'border-[#00529b] bg-[#f0f6fc] shadow-[0_0_0_1px_#00529b]'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="jenisRm"
+                      value="RMFT"
+                      checked={jenisRm === 'RMFT'}
+                      onChange={() => setJenisRm('RMFT')}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">RMFT</span>
+                      <span
+                        className={`size-3.5 rounded-full border flex items-center justify-center ${
+                          jenisRm === 'RMFT'
+                            ? 'border-[#00529b] bg-[#00529b]'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {jenisRm === 'RMFT' && <span className="size-1.5 rounded-full bg-white" />}
+                      </span>
+                    </div>
+                    <span className="mt-0.5 text-[10.5px] font-semibold text-[#00529b]">
+                      Funding & Transaction
+                    </span>
+                    <span className="mt-1 text-[10px] leading-tight text-slate-500">
+                      Penghimpunan dana, CASA, giro, deposito, & transaksi
+                    </span>
+                  </label>
+
+                  <label
+                    className={`relative flex cursor-pointer flex-col rounded-lg border p-3 transition-all ${
+                      jenisRm === 'RMSME'
+                        ? 'border-[#00529b] bg-[#f0f6fc] shadow-[0_0_0_1px_#00529b]'
+                        : 'border-slate-200 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="jenisRm"
+                      value="RMSME"
+                      checked={jenisRm === 'RMSME'}
+                      onChange={() => setJenisRm('RMSME')}
+                      className="sr-only"
+                    />
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-900">RMSME</span>
+                      <span
+                        className={`size-3.5 rounded-full border flex items-center justify-center ${
+                          jenisRm === 'RMSME'
+                            ? 'border-[#00529b] bg-[#00529b]'
+                            : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {jenisRm === 'RMSME' && <span className="size-1.5 rounded-full bg-white" />}
+                      </span>
+                    </div>
+                    <span className="mt-0.5 text-[10.5px] font-semibold text-[#00529b]">
+                      Small Medium Enterprise
+                    </span>
+                    <span className="mt-1 text-[10px] leading-tight text-slate-500">
+                      Penyaluran kredit & pembiayaan sektor usaha UMKM
+                    </span>
+                  </label>
+                </div>
+              </div>
 
               <label className="block">
                 <span className="text-xs font-semibold text-slate-700">Alamat Email</span>

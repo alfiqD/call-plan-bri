@@ -7,6 +7,7 @@ import {
   History,
   Lock,
   MapPin,
+  MoreHorizontal,
   Pencil,
   Phone,
   Plus,
@@ -48,6 +49,7 @@ function CustomersPage({
   const [followUpCustomer, setFollowUpCustomer] = useState(null)
   const [timelineCustomer, setTimelineCustomer] = useState(null)
   const [customerToDelete, setCustomerToDelete] = useState(null)
+  const [expandedActionsId, setExpandedActionsId] = useState(null)
   const [isDeletingCustomer, setIsDeletingCustomer] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [actionError, setActionError] = useState('')
@@ -364,47 +366,73 @@ function CustomersPage({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-slate-100 bg-slate-50/60 px-3 py-2">
-                <button
-                  type="button"
-                  onClick={() => setMapCustomer(customer)}
-                  className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
-                >
-                  <MapPin size={13} className="text-[#00529b]" /> Peta
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setTimelineCustomer(customer)}
-                  className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
-                >
-                  <History size={13} className="text-[#00529b]" /> Timeline
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setHistoryCustomer(customer)}
-                  className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
-                >
-                  <CalendarClock size={13} className="text-amber-600" /> Follow-up
-                </button>
-                {canManageCustomer(customer) && (
+              <div className="border-t border-slate-100 bg-slate-50/60 p-2.5">
+                {/* Baris Aksi Utama (Peta, Follow-up, Edit + Menu Tambahan) */}
+                <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={() => setEditingCustomer(customer)}
-                    className="inline-flex min-h-[38px] items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-[0_1px_1px_rgba(15,23,42,0.03)] transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b]"
+                    onClick={() => setMapCustomer(customer)}
+                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:translate-y-px"
                   >
-                    <Pencil size={13} /> Edit
+                    <MapPin size={14} className="text-[#00529b]" />
+                    <span>Peta</span>
                   </button>
-                )}
-                {isAdmin && (
                   <button
                     type="button"
-                    onClick={() => requestDeleteCustomer(customer)}
-                    title="Nonaktifkan"
-                    className="flex size-9.5 items-center justify-center rounded-lg border border-rose-200 bg-white text-rose-600 transition hover:bg-rose-50"
-                    aria-label="Nonaktifkan nasabah"
+                    onClick={() => setHistoryCustomer(customer)}
+                    className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:translate-y-px"
                   >
-                    <Trash2 size={14} />
+                    <CalendarClock size={14} className="text-amber-600" />
+                    <span>Follow-up</span>
                   </button>
+                  {canManageCustomer(customer) && (
+                    <button
+                      type="button"
+                      onClick={() => setEditingCustomer(customer)}
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700 shadow-2xs transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:translate-y-px"
+                    >
+                      <Pencil size={14} className="text-slate-600" />
+                      <span>Edit</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedActionsId((current) => current === customer.id ? null : customer.id)}
+                    className={`inline-flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg border px-2.5 py-2 text-xs font-semibold transition shadow-2xs active:translate-y-px ${
+                      expandedActionsId === customer.id
+                        ? 'border-[#00529b] bg-[#eaf3fb] text-[#00529b]'
+                        : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-100'
+                    }`}
+                    title="Tindakan lainnya"
+                    aria-label="Tindakan lainnya"
+                    aria-expanded={expandedActionsId === customer.id}
+                  >
+                    <MoreHorizontal size={16} />
+                  </button>
+                </div>
+
+                {/* Panel Tindakan Tambahan: Timeline & Hapus */}
+                {expandedActionsId === customer.id && (
+                  <div className="mt-2 flex flex-col gap-1.5 border-t border-slate-200/80 pt-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={() => setTimelineCustomer(customer)}
+                      className="inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-700 shadow-2xs transition hover:border-[#00529b]/30 hover:bg-[#f7fbff] hover:text-[#00529b] active:translate-y-px"
+                    >
+                      <History size={14} className="text-[#00529b]" />
+                      <span>Lihat Timeline Aktivitas</span>
+                    </button>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={() => requestDeleteCustomer(customer)}
+                        className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-lg border border-rose-200 bg-white px-3 py-2 text-xs font-medium text-rose-600 shadow-2xs transition hover:bg-rose-50 active:translate-y-px sm:px-4"
+                      >
+                        <Trash2 size={14} />
+                        <span>Hapus Nasabah</span>
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

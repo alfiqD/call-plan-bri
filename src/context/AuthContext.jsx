@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
           nama: userEmail ? userEmail.split('@')[0] : 'Pengguna',
           email: userEmail,
           role: 'rm',
+          jenis_rm: null,
           status: 'pending',
           assigned_area: 'Palembang',
         }
@@ -201,19 +202,24 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, fullName, jenisRm = null) => {
     setAuthError('')
     if (!isSupabaseConfigured() || !supabase) {
       throw new Error('Supabase belum dikonfigurasi. Atur VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY di .env.')
     }
     const cleanEmail = email.trim().toLowerCase()
+    const userData = {
+      full_name: fullName.trim(),
+    }
+    if (jenisRm) {
+      userData.jenis_rm = jenisRm
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email: cleanEmail,
       password,
       options: {
-        data: {
-          full_name: fullName.trim(),
-        },
+        data: userData,
       },
     })
     if (error) {
@@ -287,6 +293,7 @@ export function AuthProvider({ children }) {
     user,
     profile,
     role: profile?.role || 'rm',
+    jenisRm: profile?.jenis_rm || null,
     status: profile?.status || 'pending',
     isApproved: profile?.status === 'approved' || profile?.role === 'admin',
     isAdmin: profile?.role === 'admin',

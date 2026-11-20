@@ -78,13 +78,13 @@ export function createSeedData() {
   ]
 
   const appointments = [
-    { id: '1', customerId: '1', date: dayOffset(0), time: '09:00', purpose: 'Penagihan', priority: 'Tinggi', status: 'Selesai', notes: 'Bertemu langsung, tindak lanjut sesuai kesepakatan.', evidence: '', checkInAt: new Date().toISOString(), checkInLatitude: -6.9174640, checkInLongitude: 107.6191230 },
-    { id: '2', customerId: '2', date: dayOffset(0), time: '11:00', purpose: 'Penawaran Top-Up', priority: 'Normal', status: 'Terjadwal', notes: '', evidence: '' },
-    { id: '3', customerId: '3', date: dayOffset(0), time: '13:30', purpose: 'Survei Jaminan', priority: 'Tinggi', status: 'Reschedule', notes: 'Nasabah meminta penjadwalan ulang.', evidence: '' },
-    { id: '4', customerId: '4', date: dayOffset(0), time: '15:00', purpose: 'Kunjungan Prospek', priority: 'Normal', status: 'Terjadwal', notes: '', evidence: '' },
-    { id: '5', customerId: '5', date: dayOffset(1), time: '10:00', purpose: 'Penagihan', priority: 'Tinggi', status: 'Terjadwal', notes: '', evidence: '' },
-    { id: '6', customerId: '6', date: dayOffset(2), time: '14:00', purpose: 'Kunjungan Prospek', priority: 'Normal', status: 'Terjadwal', notes: '', evidence: '' },
-    { id: '7', customerId: '1', date: dayOffset(-1), time: '10:30', purpose: 'Follow-up', priority: 'Normal', status: 'Selesai', notes: 'Dokumen sudah diterima.', evidence: '' },
+    { id: '1', customerId: '1', date: dayOffset(0), time: '09:00', purpose: 'Penagihan', priority: 'Tinggi', status: 'Selesai', notes: 'Bertemu langsung, tindak lanjut sesuai kesepakatan.', checkInAt: new Date().toISOString(), checkInLatitude: -6.9174640, checkInLongitude: 107.6191230 },
+    { id: '2', customerId: '2', date: dayOffset(0), time: '11:00', purpose: 'Penawaran Top-Up', priority: 'Normal', status: 'Terjadwal', notes: '' },
+    { id: '3', customerId: '3', date: dayOffset(0), time: '13:30', purpose: 'Survei Jaminan', priority: 'Tinggi', status: 'Reschedule', notes: 'Nasabah meminta penjadwalan ulang.' },
+    { id: '4', customerId: '4', date: dayOffset(0), time: '15:00', purpose: 'Kunjungan Prospek', priority: 'Normal', status: 'Terjadwal', notes: '' },
+    { id: '5', customerId: '5', date: dayOffset(1), time: '10:00', purpose: 'Penagihan', priority: 'Tinggi', status: 'Terjadwal', notes: '' },
+    { id: '6', customerId: '6', date: dayOffset(2), time: '14:00', purpose: 'Kunjungan Prospek', priority: 'Normal', status: 'Terjadwal', notes: '' },
+    { id: '7', customerId: '1', date: dayOffset(-1), time: '10:30', purpose: 'Follow-up', priority: 'Normal', status: 'Selesai', notes: 'Dokumen sudah diterima.' },
   ]
 
   const followUps = [

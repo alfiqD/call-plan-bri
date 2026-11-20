@@ -34,7 +34,11 @@ function Sidebar({ activePage, onNavigate, urgentFollowUpCount = 0, onOpenLogout
   ]
 
   const displayName = profile?.nama || user?.user_metadata?.full_name || 'Petugas RM'
-  const roleLabel = isAdmin ? 'Administrator' : 'Relationship Manager'
+  const roleLabel = isAdmin
+    ? 'Administrator'
+    : profile?.jenis_rm
+      ? `RM (${profile.jenis_rm})`
+      : 'Relationship Manager'
   const initials = displayName.slice(0, 2).toUpperCase()
 
   // Split nav: menu operasional vs menu admin (jika admin)

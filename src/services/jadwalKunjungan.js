@@ -29,8 +29,6 @@ export function mapCustomerFromDb(customer) {
 }
 
 export function mapAppointmentFromDb(appointment) {
-  const locationPhoto = appointment.foto_lokasi || appointment.locationPhoto || ''
-  const documentationPhoto = appointment.foto_kunjungan || appointment.documentationPhoto || ''
   return {
     id: appointment.id,
     customerId: appointment.nasabah_id,
@@ -41,9 +39,6 @@ export function mapAppointmentFromDb(appointment) {
     rmId: appointment.rm_id || null,
     status: appointmentStatusFromApi[appointment.status] || appointment.status,
     notes: appointment.catatan_hasil || '',
-    evidence: documentationPhoto || locationPhoto || appointment.evidence || '',
-    locationPhoto,
-    documentationPhoto,
     checkInAt: appointment.check_in_at,
     checkInLatitude: appointment.check_in_latitude,
     checkInLongitude: appointment.check_in_longitude,

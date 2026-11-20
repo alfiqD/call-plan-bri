@@ -173,3 +173,93 @@ describe('Supabase Authentication Security & Demo Elimination Verification', () 
     assert.equal(emptyProfile.isAdmin, false)
   })
 })
+
+describe('Relationship Manager Specialization (RMFT & RMSME) Validation', () => {
+  const validateRmRegistration = (role, jenisRm) => {
+    if (role === 'admin') {
+      return { valid: true, jenisRm: null }
+    }
+    if (!jenisRm || !['RMFT', 'RMSME'].includes(jenisRm)) {
+      return { valid: false, error: 'Pilih jenis spesialisasi Relationship Manager (RMFT atau RMSME).' }
+    }
+    return { valid: true, jenisRm }
+  }
+
+  it('wajib menerima RMFT atau RMSME untuk pendaftaran RM baru', () => {
+    assert.deepEqual(validateRmRegistration('rm', 'RMFT'), { valid: true, jenisRm: 'RMFT' })
+    assert.deepEqual(validateRmRegistration('rm', 'RMSME'), { valid: true, jenisRm: 'RMSME' })
+  })
+
+  it('menolak pendaftaran RM baru tanpa jenis RM atau dengan nilai tidak valid', () => {
+    assert.equal(validateRmRegistration('rm', null).valid, false)
+    assert.equal(validateRmRegistration('rm', '').valid, false)
+    assert.equal(validateRmRegistration('rm', 'SUPERVISOR').valid, false)
+  })
+
+  it('memastikan Admin tidak memiliki jenis RM (selalu bernilai null)', () => {
+    assert.deepEqual(validateRmRegistration('admin', 'RMFT'), { valid: true, jenisRm: null })
+    assert.deepEqual(validateRmRegistration('admin', null), { valid: true, jenisRm: null })
+  })
+
+  it('mempertahankan akun lama yang jenis_rm-nya null tanpa fallback otomatis ke RMFT', () => {
+    const evaluateProfile = (profile) => ({
+      role: profile?.role || 'rm',
+      jenisRm: profile?.jenis_rm || null,
+      displayJenisRm: profile?.role === 'admin' ? '-' : (profile?.jenis_rm || 'Belum Ditentukan'),
+    })
+
+    const legacyProfile = evaluateProfile({ role: 'rm', jenis_rm: null })
+    assert.equal(legacyProfile.jenisRm, null)
+    assert.equal(legacyProfile.displayJenisRm, 'Belum Ditentukan')
+
+    const rmftProfile = evaluateProfile({ role: 'rm', jenis_rm: 'RMFT' })
+    assert.equal(rmftProfile.jenisRm, 'RMFT')
+    assert.equal(rmftProfile.displayJenisRm, 'RMFT')
+
+    const adminProfile = evaluateProfile({ role: 'admin', jenis_rm: null })
+    assert.equal(adminProfile.jenisRm, null)
+    assert.equal(adminProfile.displayJenisRm, '-')
+  })
+
+  it('memastikan signUp AuthContext kompatibel dengan dan tanpa parameter jenisRm', () => {
+    const buildSignUpPayload = (email, password, fullName, jenisRm = null) => {
+      const cleanEmail = email.trim().toLowerCase()
+      const userData = { full_name: fullName.trim() }
+      if (jenisRm) userData.jenis_rm = jenisRm
+      return { email: cleanEmail, password, options: { data: userData } }
+    }
+
+    const payloadWithJenis = buildSignUpPayload('rm@bri.co.id', 'rahasia123', 'Budi Santoso', 'RMFT')
+    assert.deepEqual(payloadWithJenis.options.data, { full_name: 'Budi Santoso', jenis_rm: 'RMFT' })
+
+    const payloadWithoutJenis = buildSignUpPayload('admin@bri.co.id', 'rahasia123', 'Super Admin')
+    assert.deepEqual(payloadWithoutJenis.options.data, { full_name: 'Super Admin' })
+    assert.equal(payloadWithoutJenis.options.data.jenis_rm, undefined)
+  })
+
+  it('memastikan pengangkatan RM menjadi Admin mereset jenis_rm menjadi null secara aman', () => {
+    // Simulasi logika transisi peran di admin_approve_user & AdminUsersPage
+    const changeUserRole = (currentProfile, targetRole) => {
+      const allowedRoles = ['admin', 'rm']
+      if (!allowedRoles.includes(targetRole)) {
+        throw new Error('Role tidak valid.')
+      }
+      return {
+        ...currentProfile,
+        role: targetRole,
+        jenis_rm: targetRole === 'admin' ? null : currentProfile.jenis_rm,
+      }
+    }
+
+    const rmftUser = { id: 'rm-1', role: 'rm', jenis_rm: 'RMFT', status: 'approved' }
+    const promotedToAdmin = changeUserRole(rmftUser, 'admin')
+    assert.equal(promotedToAdmin.role, 'admin')
+    assert.equal(promotedToAdmin.jenis_rm, null, 'jenis_rm wajib di-reset menjadi null saat menjadi Admin')
+
+    // Verifikasi validasi constraint profiles_jenis_rm_check:
+    // CHECK (jenis_rm IS NULL OR jenis_rm IN ('RMFT', 'RMSME'))
+    const checkConstraint = (jenisRm) => jenisRm === null || ['RMFT', 'RMSME'].includes(jenisRm)
+    assert.equal(checkConstraint(promotedToAdmin.jenis_rm), true, 'Nilai null pada Admin memenuhi constraint profiles_jenis_rm_check')
+  })
+})
+

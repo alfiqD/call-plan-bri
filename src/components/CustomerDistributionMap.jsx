@@ -3,8 +3,11 @@ import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from 'r
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
+  ChevronDown,
+  ChevronUp,
   Compass,
   ExternalLink,
+  Filter,
   MapPin,
   Maximize2,
   Phone,
@@ -79,6 +82,7 @@ function CustomerDistributionMap({
   const [selectedRmId, setSelectedRmId] = useState('Semua')
   const [searchQuery, setSearchQuery] = useState('')
   const [resetCount, setResetCount] = useState(0)
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
   // Map customer ID to latest appointment info for quick status resolution
   const customerAppointmentMap = useMemo(() => {
@@ -194,6 +198,15 @@ function CustomerDistributionMap({
     (isAdmin && selectedRmId !== 'Semua') ||
     Boolean(searchQuery.trim())
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (selectedStatusKunjungan !== 'Semua') count += 1
+    if (selectedWilayah !== 'Semua') count += 1
+    if (isAdmin && selectedRmId !== 'Semua') count += 1
+    if (searchQuery.trim()) count += 1
+    return count
+  }, [selectedStatusKunjungan, selectedWilayah, selectedRmId, searchQuery, isAdmin])
+
   // Determine marker color based on visit status
   const getMarkerStyle = (marker) => {
     if (marker.visitStatus === 'Selesai') {
@@ -214,7 +227,7 @@ function CustomerDistributionMap({
   return (
     <div className={`rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden ${className}`}>
       {/* Header Bar */}
-      <div className="border-b border-slate-200 bg-slate-50/80 px-5 py-4">
+      <div className="border-b border-slate-200 bg-slate-50/80 px-4 py-3.5 sm:px-5 sm:py-4">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#00529b]/10 text-[#00529b]">
@@ -236,7 +249,28 @@ function CustomerDistributionMap({
           </div>
 
           {/* Action / Reset Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Mobile / Tablet Filter Toggle Button (hidden on desktop lg+) */}
+            <button
+              type="button"
+              onClick={() => setIsMobileFilterOpen((prev) => !prev)}
+              aria-expanded={isMobileFilterOpen}
+              className={`inline-flex min-h-[38px] items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition shadow-2xs lg:hidden ${
+                isMobileFilterOpen || activeFilterCount > 0
+                  ? 'border-[#00529b] bg-[#eaf3fb] text-[#00529b]'
+                  : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <Filter size={13} className={activeFilterCount > 0 ? 'text-[#00529b]' : 'text-slate-500'} />
+              <span>Filter Peta</span>
+              {activeFilterCount > 0 && (
+                <span className="inline-flex size-4.5 items-center justify-center rounded-full bg-[#00529b] text-[10px] font-bold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+              {isMobileFilterOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
+
             {hasActiveFilters && (
               <button
                 type="button"
@@ -260,8 +294,25 @@ function CustomerDistributionMap({
           </div>
         </div>
 
+        {/* Active Filter Indicator Strip on Mobile/Tablet (when filter collapsed) */}
+        {!isMobileFilterOpen && activeFilterCount > 0 && (
+          <div className="mt-2.5 flex items-center justify-between rounded-lg border border-blue-100 bg-[#eaf3fb]/80 px-2.5 py-1.5 text-[11px] text-[#00529b] lg:hidden">
+            <span className="flex items-center gap-1.5 font-medium">
+              <Filter size={11} />
+              <span>{activeFilterCount} filter aktif diterapkan</span>
+            </span>
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="font-bold underline hover:text-[#003d74]"
+            >
+              Reset
+            </button>
+          </div>
+        )}
+
         {/* Filter Controls Row */}
-        <div className="mt-3.5 grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className={`mt-3.5 ${isMobileFilterOpen ? 'grid' : 'hidden lg:grid'} grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`}>
           {/* Search */}
           <div className="relative col-span-1 min-[400px]:col-span-2 sm:col-span-1">
             <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -364,7 +415,7 @@ function CustomerDistributionMap({
             style={{ height: '100%', width: '100%' }}
             className="z-0"
           >
-            <MapViewportController markers={filteredMarkers} resetTrigger={resetCount} />
+            <MapViewportController markers={filteredMarkers} resetTrigger={resetCount + (isMobileFilterOpen ? 1 : 0)} />
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
