@@ -37,12 +37,14 @@
 | Parameter | Kondisi Terkini |
 |---|---|
 | **Nama Aplikasi** | e-VisitBRI |
-| **Status Repositori** | Siap Staging & Pre-Deployment Vercel / GitHub |
-| **Unit Testing** | **75 test cases lulus (100%)** pada 15 test suites (`node --test`) |
+| **Status Deployment** | **Aktif Berjalan di Vercel Production** |
+| **Domain Production** | [https://call-plan-bri.vercel.app](https://call-plan-bri.vercel.app) |
+| **Unit Testing** | **85 test cases lulus (100%)** pada 16 test suites (`node --test`) |
 | **Linting** | **0 error, 0 warning** (`eslint .`) |
 | **Production Build** | **Berhasil dikompilasi** via Vite ke folder `dist/` |
-| **Database Cloud** | Supabase PostgreSQL aktif, RLS aktif, RPC aktif, Migrasi `20261120000001` diterapkan |
-| **Desain Antarmuka** | Responsif Desktop (lg+) & Mobile/Tablet (Bottom Nav, Kartu RM, Filter Peta Kolapsibel) |
+| **Database & Auth** | Supabase PostgreSQL aktif, RLS aktif, RPC aktif, Migrasi `20261120000001` diterapkan |
+| **Pemetaan Digital** | OpenStreetMap (OSM) gratis via Leaflet & React-Leaflet |
+| **Desain Antarmuka** | Responsif Desktop (Sidebar lg+) & Mobile/Tablet (Bottom Nav RM & Admin, Kartu RM, Filter Peta) |
 
 ---
 
@@ -67,7 +69,21 @@ Aktivitas kunjungan nasabah oleh Relationship Manager merupakan pilar utama perb
 - Geofencing GPS check-in dengan toleransi radius maksimal 100 meter menggunakan formula Haversine yang divalidasi langsung di database server (PostgreSQL RPC `submit_visit_for_administration`).
 - Pembagian status dua tahap: kunjungan lapangan beralih ke status **`execute`** (tahap administrasi), lalu diresmikan ke status **`selesai`** oleh Admin setelah berkas tuntas.
 - Manajemen siklus hidup kunjungan dari perencanaan hingga tindak lanjut (*follow-up*).
-- Antarmuka responsif ramah satu tangan (*one-handed mobile navigation*) dengan Bottom Navigation khusus RM.
+- Antarmuka responsif ramah satu tangan (*one-handed mobile navigation*) dengan Bottom Navigation khusus RM dan Bottom Navigation khusus Admin.
+
+### 2.4 Wilayah Operasional, Dinamika Profil, dan Pemisahan Data Demo vs Produksi
+
+1. **Instansi dan Wilayah Utama Operasional**:
+   - Sistem e-VisitBRI diimplementasikan secara spesifik untuk **Bank BRI KCP Iskandar Palembang**, Kota Palembang, Sumatera Selatan.
+   - Penamaan unit kerja, alamat nasabah, serta koordinat peta berorientasi pada wilayah kerja KCP Iskandar Palembang dan sekitarnya.
+
+2. **Logika Penugasan Wilayah Pengguna (`assigned_area`)**:
+   - Data wilayah kerja pengguna bersifat **dinamis** dan dibaca langsung dari kolom `assigned_area` pada tabel `profiles` di Supabase Database.
+   - Pada antarmuka pengguna (baik modal profil RM maupun Admin), apabila akun belum memiliki nilai `assigned_area` yang diisi secara spesifik di database, sistem menerapkan nilai default resmi: `'KCP Iskandar Palembang'`. Tidak ada teks statis kota lain yang tertanam di kode frontend.
+
+3. **Pemisahan Tegas Data Demo vs Data Riil Produksi**:
+   - **Data Demo Cadangan (`src/data/workspace.js`)**: Berkas lokal ini murni difungsikan sebagai data tiruan (*mock / fallback seed data*) untuk keperluan simulasi saat aplikasi dijalankan tanpa koneksi internet/Supabase, maupun untuk kebutuhan pengujian unit otomatis tertentu. Seluruh entri pada berkas ini menggunakan titik pusat koordinat Kota Palembang (`PALEMBANG_CENTER = [-2.9761, 104.7754]`) serta nama jalan lokal di Palembang (antara lain Jl. Letkol Iskandar, Jl. Jend. Sudirman, Jl. R. Sukamto, Jl. POM IX, dsb.).
+   - **Data Nasabah Produksi di Supabase Cloud (`nasabahs`)**: Merupakan basis data nasabah operasional yang sesungguhnya di server Supabase PostgreSQL. Data riil ini tersimpan terisolasi di cloud, dilindungi penuh oleh kebijakan Row Level Security (RLS), menerapkan mekanisme soft delete (`deleted_at`), dan sepenuhnya independen dari berkas demo cadangan lokal.
 
 ---
 
@@ -145,13 +161,14 @@ Call-Plan/
 │       ├── 20261105000002_add_nasabah_profile_details.sql
 │       ├── 20261105000003_remove_nasabah_category_and_pic_address.sql
 │       └── 20261120000001_add_jenis_rm_to_profiles.sql
-├── test/                            # Berkas pengujian unit otomatis (75 test cases)
+├── test/                            # Berkas pengujian unit otomatis (85 test cases - 16 suites)
+│   ├── admin-bottom-nav.test.js     # Uji logika navigasi mobile Admin (5 menu & profil)
 │   ├── auth-roles.test.js           # Uji RBAC, jenis RM, dan signup flow
 │   ├── csv-export.test.js           # Uji sanitasi formula injection CSV
 │   ├── customer-map.test.js         # Uji sanitasi koordinat dan filter marker peta
 │   ├── follow-up.test.js            # Uji lifecycle follow-up dan hak akses RM/Admin
 │   ├── haversine.test.js            # Uji formula jarak geofencing 100m
-│   ├── rm-bottom-nav.test.js        # Uji state navigasi mobile dan pemetaan profil
+│   ├── rm-bottom-nav.test.js        # Uji state navigasi mobile dan pemetaan profil RM
 │   ├── schedule-conflict.test.js    # Uji deteksi bentrok jadwal per jam & tanggal
 │   ├── storage-auth.test.js         # Uji remember-me switch session/local storage
 │   └── visit-metrics.test.js        # Uji agregasi metrik mingguan rencana vs realisasi
@@ -163,11 +180,15 @@ Call-Plan/
     │   ├── AuthContext.jsx          # Context autentikasi Supabase, session, dan profil
     │   ├── authContextInstance.js   # Instance konteks React
     │   └── useAuth.js               # Hook kustom akses otentikasi
+    ├── data/
+    │   └── workspace.js             # Data demo cadangan lokal (wilayah Palembang) saat mode offline
     ├── components/
     │   ├── AppShell.jsx             # Shell tata letak (Navbar, Sidebar desktop, BottomNav)
     │   ├── Sidebar.jsx              # Navigasi sidebar desktop (breakpoint lg+)
     │   ├── RMBottomNav.jsx          # Navigasi bawah khusus mobile RM (5 tab utama)
     │   ├── RMProfileModal.jsx       # Modal profil RM dengan status dinamis & logout
+    │   ├── AdminBottomNav.jsx       # Navigasi bawah khusus mobile Admin (5 tab utama)
+    │   ├── AdminProfileModal.jsx    # Modal profil & menu administrasi Admin
     │   ├── CustomerDistributionMap.jsx # Komponen sebaran nasabah + filter kolapsibel
     │   ├── LocationMap.jsx          # Peta penunjuk lokasi nasabah & rute OSRM
     │   ├── CustomerForm.jsx         # Form tambah & edit data nasabah
@@ -383,13 +404,38 @@ sequenceDiagram
 
 ---
 
-## 7. Desain Antarmuka Responsif dan Pengalaman Mobile RM
+## 7. Desain Antarmuka Responsif dan Pengalaman Mobile (RM & Admin)
 
-Karena sebagian besar aktivitas RM dilakukan di lapangan menggunakan perangkat telepon genggam (smartphone), sistem dirancang dengan prinsip *Mobile-First Touch Ergonomics*.
+Aplikasi dirancang dengan strategi tata letak ganda (*Dual-Layout Strategy*):
+- **Desktop (Layar ≥ 1024px / `lg+`)**: Menggunakan Sidebar permanen di sisi kiri ([Sidebar.jsx](file:///c:/SEMESTER%205%20ALFIQ/Tracking%20Nasabah/Call-Plan/src/components/Sidebar.jsx)) untuk Admin dan RM dengan area kerja luas dan pemantauan tabel multi-kolom.
+- **Mobile & Tablet (Layar < 1024px / `lg:hidden`)**: Menggunakan *Bottom Navigation Bar* ergonomis yang dioptimalkan untuk pengoperasian satu tangan (*one-handed touch ergonomics*) sesuai peran pengguna masing-masing.
+- **Pencegahan Konten Tertutup**: Konten area utama (`<main>`) pada [AppShell.jsx](file:///c:/SEMESTER%205%20ALFIQ/Tracking%20Nasabah/Call-Plan/src/components/AppShell.jsx) diberi padding bawah dinamis `pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8` sehingga tidak ada tombol, teks, atau elemen tabel yang tertutup oleh bar navigasi bawah pada perangkat smartphone apa pun.
 
-### 7.1 Bottom Navigation Khusus RM (`RMBottomNav.jsx`)
+### 7.1 Bottom Navigation Khusus Admin (`AdminBottomNav.jsx`)
+- Tampil otomatis pada layar mobile/tablet khusus untuk akun dengan role `admin`.
+- Memiliki 5 menu utama dalam grid seimbang dengan tinggi `h-16` dan target sentuh minimum `min-h-[48px]`:
+  1. **Beranda** (`dashboard` - ikon `Home`): Mengarah ke `AdminDashboardView` (ringkasan KPI, grafik mingguan, kartu kinerja RM).
+  2. **Nasabah** (`customers` - ikon `UsersRound`): Membuka data seluruh debitur dan nasabah di KCP.
+  3. **Jadwal** (`schedule` - ikon `CalendarDays`): Membuka kalender dan agenda kunjungan seluruh RM.
+  4. **Pengguna** (`admin-users` - ikon `ShieldCheck`): Akses cepat persetujuan akun RM baru (`pending`), penugasan wilayah, dan peran.
+  5. **Profil** (`profile` - ikon `User`): Membuka lembar modal profil & menu administrasi Admin.
+- **Indikator Aktif**: Tab yang sedang aktif ditandai garis aksen oranye BRI (`#f37021`) di sisi atas dan teks biru BRI (`#00529b`).
+- **Integrasi Sub-Halaman**: Tab Profil otomatis menyala aktif saat Admin berada pada sub-halaman administrasi (**Audit Log**, **Follow-up**, atau **Status Kunjungan**), maupun saat modal profil sedang terbuka.
+- **Indikator Badge**: Menampilkan titik merah jika terdapat follow-up jatuh tempo (`urgentFollowUpCount > 0`).
+
+### 7.2 Modal Profil & Menu Administrasi Admin (`AdminProfileModal.jsx`)
+- Lembar bawah (*bottom sheet modal*) yang dapat dibuka melalui tab Profil bottom nav atau menu profil header:
+  - **Ringkasan Akun Administrator**: Menampilkan inisial avatar, nama lengkap, email, badge peran `Administrator` berwarna amber, wilayah tugas dinamis (`profile?.assigned_area || 'KCP Iskandar Palembang'`), serta status akun aktif.
+  - **Menu Administrasi & Pengawasan**:
+    - **Kelola Pengguna** (`admin-users`): Manajemen akun RM dan persetujuan registrasi baru.
+    - **Audit Log** (`audit-log`): Rekam jejak aktivitas sistem dan keamanan.
+    - **Follow-up Nasabah** (`follow-up`): Pengawasan tindak lanjut seluruh RM (disertai badge jumlah mendesak).
+    - **Status Kunjungan** (`reports`): Rekapitulasi hasil kunjungan dan ekspor laporan.
+    - **Pengaturan Notifikasi**: Izin notifikasi browser dan preferensi.
+  - **Aksi Keluar**: Tombol *Keluar dari Aplikasi* yang memicu dialog konfirmasi keluar (`LogoutConfirmationModal`).
+
+### 7.3 Bottom Navigation Khusus RM (`RMBottomNav.jsx`)
 - Hanya aktif pada perangkat layar sentuh/mobile (`viewport < 1024px`) khusus untuk akun dengan role `rm`.
-- Navigasi desktop (sidebar) tetap dipertahankan untuk Admin dan layar monitor besar (`lg+`).
 - **5 Menu Utama**:
   1. **Beranda**: Mengarah ke `RMDashboardView` (ringkasan agenda dan status cepat).
   2. **Nasabah**: Mengarah ke `CustomersPage` (daftar nasabah dengan aksi sentuh cepat).
@@ -398,7 +444,7 @@ Karena sebagian besar aktivitas RM dilakukan di lapangan menggunakan perangkat t
   5. **Profil**: Membuka modal profil akun RM secara *instant*.
 - **Indikator Badge Notifikasi**: Menu Profil otomatis menampilkan titik merah dinamis jika terdapat follow-up yang terlambat (*overdue*) atau jatuh tempo hari ini.
 
-### 7.2 Modal Profil Dinamis (`RMProfileModal.jsx`)
+### 7.4 Modal Profil Dinamis RM (`RMProfileModal.jsx`)
 - Mengambil data aktual profil dari Supabase (`profiles`):
   - **Nama Lengkap & Email**.
   - **Spesialisasi RM**: Badge dinamis `RM Funding & Transaction` atau `RM Small Medium Enterprise`.
@@ -408,17 +454,18 @@ Karena sebagian besar aktivitas RM dilakukan di lapangan menggunakan perangkat t
     - `rejected`: Teks merah "Ditolak" + ikon `XCircle`.
     - Status tidak dikenal: Tampilan netral.
   - **Wilayah Penugasan Dinamis**: Membaca `profile.assigned_area` dengan fallback `'KCP Iskandar Palembang'`.
+  - **Menu Operasional Lainnya**: Tautan cepat ke Follow-up Nasabah, Status Kunjungan, Pengaturan Notifikasi, dan Logout.
 
-### 7.3 Optimasi Kartu Nasabah Layar Sentuh (`CustomersPage.jsx`)
+### 7.5 Optimasi Kartu Nasabah Layar Sentuh (`CustomersPage.jsx`)
 - Pada layar sempit (320px–430px), tabel dikonversi menjadi kartu nasabah responsif.
 - Tombol aksi utama (**Peta**, **Follow-up**, **Edit**) ditata dengan area sentuh minimum **44px × 44px** sesuai standar pedoman aksesibilitas Apple HIG dan Google Material Design.
 - Tombol aksi sekunder (**Timeline Aktivitas**, **Hapus Data**) dikelompokkan ke dalam menu aksi lanjutan (*more dropdown*) untuk mencegah kepadatan visual.
 
-### 7.4 Filter Peta Kolapsibel (`CustomerDistributionMap.jsx`)
+### 7.6 Filter Peta Kolapsibel (`CustomerDistributionMap.jsx`)
 - Pada layar HP, filter status pinjaman dan status kunjungan disembunyikan di balik tombol kolapsibel **Filter Peta**.
 - Terdapat badge jumlah filter aktif sehingga RM dapat melihat peta secara luas tanpa terhalang tumpukan input filter.
 
-### 7.5 Tampilan Responsif Kinerja RM Admin (`AdminDashboardView.jsx`)
+### 7.7 Tampilan Responsif Kinerja RM Admin (`AdminDashboardView.jsx`)
 - Pada desktop: Tabel multi-kolom komprehensif menampilkan target, realisasi, dan rasio kunjungan.
 - Pada mobile & tablet: Secara otomatis berubah menjadi kartu metrik per-RM tanpa memerlukan scroll horizontal yang menyulitkan.
 
@@ -625,9 +672,17 @@ Berikut adalah fungsi RPC aktual yang didefinisikan dalam migration PostgreSQL d
 
 ---
 
-## 10. Konfigurasi Deployment Vercel dan GitHub
+## 10. Konfigurasi dan Status Deployment Vercel
 
-Aplikasi e-VisitBRI telah dikonfigurasi untuk deployment produksi pada platform **Vercel** yang terhubung langsung dengan repositori **GitHub**.
+Aplikasi e-VisitBRI telah **berhasil di-deploy ke Vercel** dan terhubung langsung secara *Continuous Deployment* (CD) dengan repositori **GitHub** pada branch `main`.
+
+| Informasi Deployment | Rincian |
+|---|---|
+| **Domain Production** | [https://call-plan-bri.vercel.app](https://call-plan-bri.vercel.app) |
+| **Penyedia Hosting Frontend** | Vercel Platform (Edge Network, HTTPS otomatis) |
+| **Teknologi Frontend** | React 19 + Vite SPA |
+| **Backend & Autentikasi** | Supabase Cloud (PostgreSQL, PKCE Auth, RLS, RPC) |
+| **Penyedia Peta Digital** | OpenStreetMap (OSM) via Leaflet & React-Leaflet |
 
 ### 10.1 Konfigurasi Routing dan Security Headers (`vercel.json`)
 ```json
@@ -672,9 +727,22 @@ Variabel berikut wajib dikonfigurasi pada dashboard **Vercel Project Settings**:
 
 Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit tests*) bawaan Node.js (`node --test`), linter, dan kompilasi build produksi.
 
-### 11.1 Hasil Pengujian Unit Otomatis (75 Test Cases - 100% Pass)
+### 11.1 Hasil Pengujian Unit Otomatis (85 Test Cases - 100% Pass)
 
 ```text
+▶ Admin Mobile Bottom Navigation Logic (10 tests)
+  ✔ memiliki tepat 5 menu dalam urutan yang benar (Beranda, Nasabah, Jadwal, Pengguna, Profil)
+  ✔ mengaktifkan menu Beranda saat berada di dashboard Admin tanpa modal terbuka
+  ✔ mengaktifkan menu Nasabah saat berada di halaman daftar nasabah
+  ✔ mengaktifkan menu Jadwal saat berada di halaman jadwal kunjungan
+  ✔ mengaktifkan menu Pengguna saat berada di halaman kelola pengguna Admin
+  ✔ mengaktifkan menu Profil dan menonaktifkan menu lain saat modal profil terbuka
+  ✔ mengaktifkan menu Profil saat berada di sub-halaman administrasi (audit-log, follow-up, reports)
+  ✔ menampilkan badge indikator pada menu Profil saat ada follow-up mendesak
+  ✔ memastikan pemisahan navigasi bottom: AdminBottomNav untuk Admin dan RMBottomNav untuk RM
+  ✔ memformat informasi profil Administrator dan wilayah tugas secara konsisten
+✔ Admin Mobile Bottom Navigation Logic (5.02ms)
+
 ▶ Role & Approval Access Control Matrix (2 Roles: Admin & RM) (6 tests)
   ✔ menolak akses operasional untuk akun berstatus pending meskipun rolenya RM
   ✔ menolak akses operasional untuk akun berstatus rejected
@@ -713,7 +781,7 @@ Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit 
 ✔ CSV Formula Injection Defense (10.00ms)
 
 ▶ Customer Map Coordinate Validation & Sanitization (5 tests)
-  ✔ menerima koordinat valid di Palembang/Bandung
+  ✔ menerima koordinat valid di Palembang dan sekitarnya
   ✔ menolak nilai null, undefined, atau string kosong
   ✔ menolak nilai NaN atau teks bukan angka
   ✔ menolak koordinat di luar batas latitude [-90, 90] atau longitude [-180, 180]
@@ -795,8 +863,18 @@ Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit 
   ✔ counts completed visits by check-in date, while plans follow the current scheduled date
 ✔ Weekly visit metrics (5.67ms)
 
-TOTAL: 75 Passed, 0 Failed, 15 Suites (Duration: ~1.80s)
+TOTAL: 85 Passed, 0 Failed, 16 Suites (Duration: ~1.60s)
 ```
+
+### 11.2 Hasil Static Code Analysis & Production Build
+- **ESLint (`eslint .`)**: **0 error, 0 warning** — menjamin kode JavaScript/JSX bersih dari potensi bug, hook error, atau variabel tidak terpakai.
+- **Production Build (`vite build`)**: **Berhasil 100%** dalam ~2.57 detik — menghasilkan berkas statis siap pakai di direktori `dist/` dengan konfigurasi modul teroptimasi.
+
+### 11.3 Penjelasan Metodologi dan Batasan Pengujian
+> **PENTING UNTUK DIKETAHUI**:
+> Seluruh hasil pengujian pada Bab 11 ini merupakan **pengujian unit otomatis (*automated unit tests*)** dan **analisis statis kode** yang dijalankan di lingkungan Node.js.
+> - **Cakupan Pengujian**: Memvalidasi logika bisnis, alur status kunjungan, algoritma Haversine jarak 100 meter, matriks hak akses RBAC, pencegahan injeksi formula CSV, deteksi bentrok jadwal, navigasi mobile RM & Admin, dan *state management* antarmuka.
+> - **Bukan Uji Coba Fisik Lapangan Penuh**: Pengujian otomatis ini **bukan** pengganti pengujian operasional langsung di perangkat smartphone fisik di lapangan. Validasi sensor GPS di bawah kondisi cuaca ekstrem, di dalam gedung ruko bertingkat, atau pada area *blank spot* seluler di Palembang tetap memerlukan verifikasi langsung oleh petugas di masa operasional.
 
 ---
 
@@ -894,7 +972,7 @@ Bagian ini dirancang khusus untuk mempermudah penyusunan dokumen formal **Lapora
 
 #### 3. Hasil Pengujian Sistem (*Testing Results*)
 - Sajikan metodologi pengujian:
-  - **Automated Unit Testing**: 75 kasus uji menggunakan framework uji Node.js bawaan dengan tingkat kelulusan 100% (sertakan tabel matriks pengujian dari Bagian 11.1).
+  - **Automated Unit Testing**: 85 kasus uji menggunakan framework uji Node.js bawaan dengan tingkat kelulusan 100% (sertakan tabel matriks pengujian dari Bagian 11.1).
   - **Static Code Analysis**: Pengujian kode menggunakan ESLint (0 error, 0 warning).
   - **Production Build Testing**: Pengujian kompilasi bundel aset Vite tanpa kegagalan sintaks.
 - **Analisis Keamanan**:
@@ -952,7 +1030,7 @@ Bagian ini dirancang khusus untuk mempermudah penyusunan dokumen formal **Lapora
 
 5. **Eksekusi Pengujian dan Validasi Kualitas Kode**:
    ```bash
-   # Menjalankan 75 unit test otomatis
+   # Menjalankan 85 unit test otomatis
    npm test
 
    # Menjalankan linter kode

@@ -220,7 +220,7 @@ describe('RM Mobile Bottom Navigation Logic', () => {
   it('menggunakan assigned_area profil dinamis dengan fallback KCP Iskandar Palembang', () => {
     const resolveAssignedArea = (profile) => profile?.assigned_area || 'KCP Iskandar Palembang'
 
-    assert.equal(resolveAssignedArea({ assigned_area: 'Bandung' }), 'Bandung')
+    assert.equal(resolveAssignedArea({ assigned_area: 'Palembang' }), 'Palembang')
     assert.equal(resolveAssignedArea({ assigned_area: 'KCP Sudirman' }), 'KCP Sudirman')
     assert.equal(resolveAssignedArea({ assigned_area: null }), 'KCP Iskandar Palembang')
     assert.equal(resolveAssignedArea({ assigned_area: '' }), 'KCP Iskandar Palembang')

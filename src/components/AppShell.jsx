@@ -12,6 +12,8 @@ import {
 import Sidebar from './Sidebar'
 import RMBottomNav from './RMBottomNav'
 import RMProfileModal from './RMProfileModal'
+import AdminBottomNav from './AdminBottomNav'
+import AdminProfileModal from './AdminProfileModal'
 import NotificationBell from './NotificationBell'
 import NotificationSettingsModal from './NotificationSettingsModal'
 import LogoutConfirmationModal from './LogoutConfirmationModal'
@@ -358,10 +360,7 @@ function AppShell({
         )}
 
         {/* ── Content Area ──────────────────────────────────────────── */}
-        <main className={`workspace-main mx-auto min-w-0 max-w-7xl px-4 pt-4 sm:px-6 sm:pt-6 xl:px-8 ${role === 'rm'
-          ? 'pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-8'
-          : 'pb-8'
-          }`}>
+        <main className="workspace-main mx-auto min-w-0 max-w-7xl px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 lg:pb-8 xl:px-8">
           {children}
 
           {/* Clean Enterprise Footer */}
@@ -384,9 +383,34 @@ function AppShell({
           />
         )}
 
+        {/* ── Bottom Navigation (Admin) ──────────────────────────────── */}
+        {role === 'admin' && (
+          <AdminBottomNav
+            activePage={activePage}
+            isProfileOpen={profileModalOpen}
+            onNavigate={navigate}
+            onOpenProfile={() => setProfileModalOpen(true)}
+            urgentFollowUpCount={urgentFollowUpCount}
+          />
+        )}
+
         {/* ── RM Profile Bottom Sheet Modal ─────────────────────────── */}
         {role === 'rm' && (
           <RMProfileModal
+            isOpen={profileModalOpen}
+            onClose={() => setProfileModalOpen(false)}
+            user={user}
+            profile={profile}
+            onNavigate={navigate}
+            urgentFollowUpCount={urgentFollowUpCount}
+            onOpenSettings={() => setSettingsModalOpen(true)}
+            onOpenLogout={() => setLogoutModalOpen(true)}
+          />
+        )}
+
+        {/* ── Admin Profile Bottom Sheet Modal ──────────────────────── */}
+        {role === 'admin' && (
+          <AdminProfileModal
             isOpen={profileModalOpen}
             onClose={() => setProfileModalOpen(false)}
             user={user}

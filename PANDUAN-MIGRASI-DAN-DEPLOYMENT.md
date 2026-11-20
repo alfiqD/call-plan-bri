@@ -118,7 +118,7 @@ Semua berkas migration telah disiapkan di folder `supabase/migrations/`:
    - Tempel isi `20261028000003_rls_policies.sql` -> Klik **Run**.
    - Tempel isi `20261029000001_simplify_to_two_roles.sql` -> Klik **Run**.
    - Tempel isi `20261029000002_create_follow_ups.sql` -> Klik **Run**.
-4. (Opsional) Tempel isi `seed.sql` jika ingin mengunggah data nasabah contoh Bandung.
+4. (Opsional) Tempel isi `seed.sql` jika ingin mengunggah data nasabah contoh.
 
 ---
 

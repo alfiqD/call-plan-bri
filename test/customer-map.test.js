@@ -28,9 +28,9 @@ function filterMapMarkers(markers, filters, currentUser) {
 }
 
 describe('Customer Map Coordinate Validation & Sanitization', () => {
-  test('menerima koordinat valid di Palembang/Bandung', () => {
+  test('menerima koordinat valid di Palembang dan sekitarnya', () => {
     assert.equal(isValidCoordinate(-2.9761, 104.7754), true)
-    assert.equal(isValidCoordinate('-6.9174640', '107.6191230'), true)
+    assert.equal(isValidCoordinate('-2.9854000', '104.7572000'), true)
   })
 
   test('menolak nilai null, undefined, atau string kosong', () => {
