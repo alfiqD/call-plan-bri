@@ -1,8 +1,9 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LoaderCircle, RefreshCw } from 'lucide-react'
 import AppShell from './components/AppShell'
 import { AuthProvider } from './context/AuthContext'
 import { useAuth } from './context/useAuth'
+import { isSupabaseConfigured, supabase } from './services/supabase'
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
@@ -12,6 +13,8 @@ import {
   deleteCustomer as deleteCustomerRequest,
   fetchAppointments,
   fetchCustomers,
+  mapAppointmentFromDb,
+  mapCustomerFromDb,
   saveAppointment as saveAppointmentRequest,
   saveCustomer as saveCustomerRequest,
 } from './services/jadwalKunjungan'
@@ -66,6 +69,35 @@ function MainWorkspace() {
   const effectivePage = (adminOnlyPages.includes(activePage) && !isAdmin) ? 'dashboard' : activePage
   const Page = pages[effectivePage] || DashboardPage
 
+  const isFetchingRef = useRef(false)
+  const debounceTimerRef = useRef(null)
+  const lastFocusFetchRef = useRef(0)
+
+  const reloadWorkspaceSilent = useCallback(async () => {
+    if (isFetchingRef.current) return
+    isFetchingRef.current = true
+    try {
+      const filterUser = isAdmin ? null : { id: user?.id, role: profile?.role || 'rm' }
+      const [customers, appointments, followUps] = await Promise.all([
+        fetchCustomers(),
+        fetchAppointments(filterUser),
+        fetchFollowUps(filterUser),
+      ])
+      setWorkspace({ customers, appointments, followUps: followUps || [] })
+    } catch (err) {
+      console.warn('Gagal memuat ulang data di latar belakang:', err)
+    } finally {
+      isFetchingRef.current = false
+    }
+  }, [isAdmin, user, profile])
+
+  const scheduleDebouncedReload = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    debounceTimerRef.current = setTimeout(() => {
+      reloadWorkspaceSilent()
+    }, 250)
+  }, [reloadWorkspaceSilent])
+
   const handleNavigate = useCallback((targetPage) => {
     if (adminOnlyPages.includes(targetPage) && !isAdmin) {
       setToast('Akses ditolak: Halaman ini hanya dapat diakses oleh Administrator.')
@@ -105,6 +137,142 @@ function MainWorkspace() {
       isActive = false
     }
   }, [reloadKey, user?.id, isAdmin, profile?.role])
+
+  // Realtime subscription & focus refetch untuk jadwal kunjungan & nasabah (monitoring terpusat)
+  useEffect(() => {
+    if (!isSupabaseConfigured() || !supabase || !user?.id) return undefined
+
+    let isSubscribed = true
+    const channelName = `realtime-workspace-${user.id}-${Date.now()}`
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'jadwal_kunjungans',
+        },
+        (payload) => {
+          if (!isSubscribed) return
+
+          // Optimistic local update untuk event UPDATE instan
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const mapped = mapAppointmentFromDb(payload.new)
+            setWorkspace((current) => {
+              if (!current?.appointments) return current
+              const exists = current.appointments.some((a) => String(a.id) === String(mapped.id))
+              if (isAdmin) {
+                return {
+                  ...current,
+                  appointments: exists
+                    ? current.appointments.map((a) => String(a.id) === String(mapped.id) ? mapped : a)
+                    : [...current.appointments, mapped],
+                }
+              }
+              // Untuk RM: hanya jika jadwal milik RM yang bersangkutan
+              if (mapped.rmId === user.id || !mapped.rmId) {
+                return {
+                  ...current,
+                  appointments: exists
+                    ? current.appointments.map((a) => String(a.id) === String(mapped.id) ? mapped : a)
+                    : [...current.appointments, mapped],
+                }
+              }
+              // Jika jadwal dipindahkan dari RM ini ke RM lain:
+              return {
+                ...current,
+                appointments: current.appointments.filter((a) => String(a.id) !== String(mapped.id)),
+              }
+            })
+          }
+
+          // Sinkronisasi penuh secara debounced
+          if (isAdmin) {
+            scheduleDebouncedReload()
+          } else {
+            const newRmId = payload.new?.rm_id
+            const oldRmId = payload.old?.rm_id
+            const isRelevant = !newRmId || newRmId === user.id || oldRmId === user.id
+            if (isRelevant) {
+              scheduleDebouncedReload()
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'nasabahs',
+        },
+        (payload) => {
+          if (!isSubscribed) return
+
+          // Optimistic update pada tabel nasabah (status monitoring terpusat)
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const mapped = mapCustomerFromDb(payload.new)
+            setWorkspace((current) => {
+              if (!current?.customers) return current
+              const exists = current.customers.some((c) => String(c.id) === String(mapped.id))
+              return {
+                ...current,
+                customers: exists
+                  ? current.customers.map((c) => String(c.id) === String(mapped.id) ? { ...c, ...mapped } : c)
+                  : [mapped, ...current.customers],
+              }
+            })
+          } else if (payload.eventType === 'INSERT' && payload.new) {
+            const mapped = mapCustomerFromDb(payload.new)
+            setWorkspace((current) => {
+              if (!current?.customers) return current
+              const exists = current.customers.some((c) => String(c.id) === String(mapped.id))
+              if (exists) return current
+              return {
+                ...current,
+                customers: [mapped, ...current.customers],
+              }
+            })
+          } else if (payload.eventType === 'DELETE' && payload.old) {
+            setWorkspace((current) => {
+              if (!current?.customers) return current
+              return {
+                ...current,
+                customers: current.customers.filter((c) => String(c.id) !== String(payload.old.id)),
+              }
+            })
+          }
+
+          // Trigger sinkronisasi penuh debounced untuk menjamin seluruh data relasional sinkron
+          scheduleDebouncedReload()
+        }
+      )
+      .subscribe()
+
+    // Refetch otomatis saat browser/tab kembali aktif/fokus
+    const handleFocusOrVisible = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        const now = Date.now()
+        if (now - lastFocusFetchRef.current > 6000) {
+          lastFocusFetchRef.current = now
+          scheduleDebouncedReload()
+        }
+      }
+    }
+
+    window.addEventListener('focus', handleFocusOrVisible)
+    document.addEventListener('visibilitychange', handleFocusOrVisible)
+
+    return () => {
+      isSubscribed = false
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      window.removeEventListener('focus', handleFocusOrVisible)
+      document.removeEventListener('visibilitychange', handleFocusOrVisible)
+      supabase.removeChannel(channel)
+    }
+  }, [user?.id, isAdmin, scheduleDebouncedReload])
 
   useEffect(() => {
     if (!toast) return undefined
@@ -289,10 +457,10 @@ function MainWorkspace() {
 }
 
 function AppContent() {
-  const { user, isApproved, isLoading } = useAuth()
+  const { user, profile, isApproved, isLoading } = useAuth()
   const [authView, setAuthView] = useState('login')
 
-  if (isLoading) {
+  if (isLoading || (user && !profile)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#002347] text-white">
         <div className="text-center">
@@ -311,7 +479,7 @@ function AppContent() {
   }
 
   // If user is logged in, but not approved yet:
-  if (user && !isApproved) {
+  if (!isApproved) {
     return <PendingApprovalPage />
   }
 

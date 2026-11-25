@@ -112,6 +112,45 @@ describe('Supabase Authentication Security & Demo Elimination Verification', () 
     assert.equal(canAccessMainWorkspace({ id: 'user-1' }, true), true)  // Terautentikasi dan approved
   })
 
+  it('tidak menampilkan halaman pending approval ketika profil masih dimuat (mencegah flashing)', () => {
+    const resolveAppView = ({ user, profile, isApproved, isLoading }) => {
+      if (isLoading || (user && !profile)) return 'loading'
+      if (!user) return 'login'
+      if (!isApproved) return 'pending_approval'
+      return 'main_workspace'
+    }
+
+    // Kasus 1: Sesi ada tapi profil masih loading dari Supabase (wajib loading, jangan flash pending_approval)
+    assert.equal(
+      resolveAppView({ user: { id: 'u-1' }, profile: null, isApproved: false, isLoading: false }),
+      'loading'
+    )
+
+    // Kasus 2: Akun RM approved selesai dimuat -> langsung workspace
+    assert.equal(
+      resolveAppView({ user: { id: 'u-1' }, profile: { status: 'approved' }, isApproved: true, isLoading: false }),
+      'main_workspace'
+    )
+
+    // Kasus 3: Akun Admin selesai dimuat -> langsung workspace
+    assert.equal(
+      resolveAppView({ user: { id: 'u-admin' }, profile: { role: 'admin', status: 'approved' }, isApproved: true, isLoading: false }),
+      'main_workspace'
+    )
+
+    // Kasus 4: Akun memang pending selesai dimuat -> halaman pending approval
+    assert.equal(
+      resolveAppView({ user: { id: 'u-2' }, profile: { status: 'pending' }, isApproved: false, isLoading: false }),
+      'pending_approval'
+    )
+
+    // Kasus 5: Belum login -> login page
+    assert.equal(
+      resolveAppView({ user: null, profile: null, isApproved: false, isLoading: false }),
+      'login'
+    )
+  })
+
   it('menolak pemulihan sesi jika hanya ada token demo lokal lama', () => {
     const restoreSessionFromStorage = (supabaseSession, legacyDemoStorage) => {
       // Mekanisme aman: HANYA membaca sesi Supabase valid, mengabaikan legacy demo storage lokal

@@ -4,27 +4,46 @@ import { AUDIT_ACTIONS, ENTITY_TYPES, recordAuditEvent } from './auditLog'
 
 const appointmentStatusFromApi = {
   pending: 'Terjadwal',
+  terjadwal: 'Terjadwal',
   execute: 'Execute',
   selesai: 'Selesai',
   reschedule: 'Reschedule',
   tidak_ditemui: 'Tidak ditemui',
+  'tidak ditemui': 'Tidak ditemui',
   batal: 'Batal',
+  dibatalkan: 'Batal',
+  'belum ada jadwal': 'Belum Ada Jadwal',
+  'belum_ada_jadwal': 'Belum Ada Jadwal',
+}
+
+/**
+ * Normalisasi status kunjungan secara case-insensitive untuk konsistensi seluruh aplikasi
+ */
+export function normalizeVisitStatus(status) {
+  if (!status) return 'Terjadwal'
+  const normalizedKey = String(status).trim().toLowerCase()
+  return appointmentStatusFromApi[normalizedKey] || status
 }
 
 export function mapCustomerFromDb(customer) {
   return {
     id: customer.id,
-    name: customer.nama,
-    customerKind: customer.jenis_nasabah || '',
-    businessType: customer.jenis_usaha || '',
-    picName: customer.nama_pic || '',
-    phone: customer.no_hp,
-    noRekening: customer.no_rekening || '',
-    address: customer.alamat,
-    loanStatus: customer.status_pinjaman || 'Belum ada pinjaman',
+    name: customer.nama || customer.name || '',
+    customerKind: customer.jenis_nasabah || customer.customerKind || '',
+    businessType: customer.jenis_usaha || customer.businessType || '',
+    picName: customer.nama_pic || customer.picName || '',
+    phone: customer.no_hp || customer.phone || '',
+    noRekening: customer.no_rekening || customer.noRekening || '',
+    address: customer.alamat || customer.address || '',
+    loanStatus: customer.status_pinjaman || customer.loanStatus || 'Belum ada pinjaman',
     latitude: customer.latitude === null || customer.latitude === undefined ? '' : String(customer.latitude),
     longitude: customer.longitude === null || customer.longitude === undefined ? '' : String(customer.longitude),
-    createdByRmId: customer.created_by_rm_id || null,
+    createdByRmId: customer.created_by_rm_id || customer.createdByRmId || null,
+    latestVisitStatus: customer.latest_visit_status || customer.latestVisitStatus || 'Belum Ada Jadwal',
+    latestVisitRmId: customer.latest_visit_rm_id || customer.latestVisitRmId || null,
+    latestVisitDate: customer.latest_visit_date || customer.latestVisitDate || null,
+    latestStatusChangedBy: customer.latest_status_changed_by || customer.latestStatusChangedBy || null,
+    latestStatusUpdatedAt: customer.latest_status_updated_at || customer.latestStatusUpdatedAt || null,
   }
 }
 
@@ -37,7 +56,7 @@ export function mapAppointmentFromDb(appointment) {
     purpose: appointment.tujuan,
     priority: appointment.prioritas === 'tinggi' ? 'Tinggi' : 'Normal',
     rmId: appointment.rm_id || null,
-    status: appointmentStatusFromApi[appointment.status] || appointment.status,
+    status: normalizeVisitStatus(appointment.status),
     notes: appointment.catatan_hasil || '',
     checkInAt: appointment.check_in_at,
     checkInLatitude: appointment.check_in_latitude,

@@ -15,6 +15,7 @@ import {
   Search,
   X,
 } from 'lucide-react'
+import { normalizeVisitStatus } from '../services/jadwalKunjungan'
 
 // Default center to Bank BRI KCP Iskandar Palembang area
 const PALEMBANG_CENTER = [-2.9761, 104.7754]
@@ -90,7 +91,9 @@ function CustomerDistributionMap({
     for (const apt of appointments) {
       const cId = String(apt.customerId)
       const existing = map.get(cId)
-      if (!existing || apt.date >= existing.date) {
+      const aptKey = `${apt.date || ''} ${apt.time || ''}`
+      const existingKey = existing ? `${existing.date || ''} ${existing.time || ''}` : ''
+      if (!existing || aptKey >= existingKey) {
         map.set(cId, apt)
       }
     }
@@ -120,8 +123,14 @@ function CustomerDistributionMap({
         map.set(apt.rmId, apt.rmName || `RM #${apt.rmId.slice(0, 6)}`)
       }
     }
+    for (const c of customers) {
+      const rmId = c.latestVisitRmId || c.createdByRmId
+      if (rmId && !map.has(rmId)) {
+        map.set(rmId, `RM #${String(rmId).slice(0, 6)}`)
+      }
+    }
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
-  }, [appointments, isAdmin])
+  }, [appointments, customers, isAdmin])
 
   // Prepare all valid markers
   const allValidMarkers = useMemo(() => {
@@ -131,9 +140,23 @@ function CustomerDistributionMap({
         const lat = Number(c.latitude)
         const lng = Number(c.longitude)
         const apt = customerAppointmentMap.get(String(c.id))
-        const visitStatus = apt ? apt.status : 'Belum Ada Jadwal'
-        const rmId = apt?.rmId || c.createdByRmId || null
-        const rmName = apt?.rmName || 'RM'
+
+        // Sumber Status Monitoring Terpusat (dari public.nasabahs):
+        // Seluruh role (Admin, RMFT, RMSME) membaca status yang sama dari kolom monitoring nasabah
+        const monitoringStatus = c.latestVisitStatus || c.latest_visit_status
+        let visitStatus = 'Belum Ada Jadwal'
+        if (monitoringStatus && String(monitoringStatus).trim().toLowerCase() !== 'belum ada jadwal') {
+          visitStatus = normalizeVisitStatus(monitoringStatus)
+        } else if (monitoringStatus && String(monitoringStatus).trim().toLowerCase() === 'belum ada jadwal') {
+          visitStatus = 'Belum Ada Jadwal'
+        } else if (apt) {
+          // Fallback lokal jika data nasabah belum memiliki kolom monitoring (misal data mock/test)
+          visitStatus = normalizeVisitStatus(apt.status)
+        }
+
+        const rmId = c.latestVisitRmId || c.latest_visit_rm_id || apt?.rmId || c.createdByRmId || null
+        const lastVisitDate = c.latestVisitDate || c.latest_visit_date || apt?.date || null
+        const rmName = apt?.rmName || (rmId ? `RM #${String(rmId).slice(0, 6)}` : 'Admin / Belum Ditugaskan')
 
         return {
           id: c.id,
@@ -148,7 +171,10 @@ function CustomerDistributionMap({
           visitStatus,
           rmId,
           rmName,
-          lastVisitDate: apt?.date || null,
+          lastVisitDate,
+          latestVisitRmId: c.latestVisitRmId || c.latest_visit_rm_id || null,
+          latestStatusChangedBy: c.latestStatusChangedBy || c.latest_status_changed_by || null,
+          latestStatusUpdatedAt: c.latestStatusUpdatedAt || c.latest_status_updated_at || null,
         }
       })
   }, [customers, customerAppointmentMap])
@@ -158,7 +184,9 @@ function CustomerDistributionMap({
     return allValidMarkers.filter((m) => {
       // Filter status kunjungan
       if (selectedStatusKunjungan !== 'Semua') {
-        if (m.visitStatus !== selectedStatusKunjungan) return false
+        const markerStatus = normalizeVisitStatus(m.visitStatus)
+        const filterStatus = normalizeVisitStatus(selectedStatusKunjungan)
+        if (markerStatus !== filterStatus && m.visitStatus !== selectedStatusKunjungan) return false
       }
 
       // Filter wilayah
@@ -209,16 +237,17 @@ function CustomerDistributionMap({
 
   // Determine marker color based on visit status
   const getMarkerStyle = (marker) => {
-    if (marker.visitStatus === 'Selesai') {
+    const s = String(marker?.visitStatus || '').trim().toLowerCase()
+    if (s === 'selesai') {
       return { fillColor: '#10b981', color: '#ffffff', label: 'Sudah Dikunjungi' }
     }
-    if (marker.visitStatus === 'Execute') {
+    if (s === 'execute') {
       return { fillColor: '#00529b', color: '#ffffff', label: 'Tahap Administrasi' }
     }
-    if (marker.visitStatus === 'Reschedule') {
+    if (s === 'reschedule') {
       return { fillColor: '#f59e0b', color: '#ffffff', label: 'Reschedule' }
     }
-    if (marker.visitStatus === 'Tidak ditemui') {
+    if (s === 'tidak_ditemui' || s === 'tidak ditemui') {
       return { fillColor: '#ef4444', color: '#ffffff', label: 'Tidak Ditemui' }
     }
     return { fillColor: '#64748b', color: '#ffffff', label: 'Nasabah' }
@@ -472,6 +501,20 @@ function CustomerDistributionMap({
                           <span className="text-slate-400 block">Pinjaman</span>
                           <span className="font-semibold text-slate-800 block truncate">{marker.loanStatus}</span>
                         </div>
+                        {marker.lastVisitDate && (
+                          <div>
+                            <span className="text-slate-400 block">Tgl Kunjungan</span>
+                            <span className="font-semibold text-slate-800 block truncate">{marker.lastVisitDate}</span>
+                          </div>
+                        )}
+                        {marker.visitStatus !== 'Belum Ada Jadwal' && (
+                          <div>
+                            <span className="text-slate-400 block">Petugas RM</span>
+                            <span className="font-semibold text-slate-800 block truncate" title={marker.rmName}>
+                              {marker.rmName}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
                       {/* Action Buttons */}

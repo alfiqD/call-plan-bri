@@ -39,10 +39,10 @@
 | **Nama Aplikasi** | e-VisitBRI |
 | **Status Deployment** | **Aktif Berjalan di Vercel Production** |
 | **Domain Production** | [https://call-plan-bri.vercel.app](https://call-plan-bri.vercel.app) |
-| **Unit Testing** | **85 test cases lulus (100%)** pada 16 test suites (`node --test`) |
+| **Unit Testing** | **95 test cases lulus (100%)** pada 18 test suites (`node --test`) |
 | **Linting** | **0 error, 0 warning** (`eslint .`) |
 | **Production Build** | **Berhasil dikompilasi** via Vite ke folder `dist/` |
-| **Database & Auth** | Supabase PostgreSQL aktif, RLS aktif, RPC aktif, Migrasi `20261120000001` diterapkan |
+| **Database & Auth** | Supabase PostgreSQL aktif, RLS aktif, RPC aktif, Migrasi `20261125000001` (Monitoring Terpusat) diterapkan |
 | **Pemetaan Digital** | OpenStreetMap (OSM) gratis via Leaflet & React-Leaflet |
 | **Desain Antarmuka** | Responsif Desktop (Sidebar lg+) & Mobile/Tablet (Bottom Nav RM & Admin, Kartu RM, Filter Peta) |
 
@@ -160,12 +160,13 @@ Call-Plan/
 │       ├── 20261105000001_add_execute_visit_status.sql           # (RPC submit_visit & complete_admin)
 │       ├── 20261105000002_add_nasabah_profile_details.sql
 │       ├── 20261105000003_remove_nasabah_category_and_pic_address.sql
-│       └── 20261120000001_add_jenis_rm_to_profiles.sql
-├── test/                            # Berkas pengujian unit otomatis (85 test cases - 16 suites)
+│       ├── 20261120000001_add_jenis_rm_to_profiles.sql
+│       └── 20261125000001_add_centralized_visit_monitoring_to_nasabahs.sql # (Monitoring terpusat nasabah & trigger realtime)
+├── test/                            # Berkas pengujian unit otomatis (95 test cases - 18 suites)
 │   ├── admin-bottom-nav.test.js     # Uji logika navigasi mobile Admin (5 menu & profil)
-│   ├── auth-roles.test.js           # Uji RBAC, jenis RM, dan signup flow
+│   ├── auth-roles.test.js           # Uji RBAC, jenis RM, approved anti-flashing, dan signup flow
 │   ├── csv-export.test.js           # Uji sanitasi formula injection CSV
-│   ├── customer-map.test.js         # Uji sanitasi koordinat dan filter marker peta
+│   ├── customer-map.test.js         # Uji sanitasi koordinat, filter marker, & konsistensi monitoring terpusat (Admin, RMFT, RMSME)
 │   ├── follow-up.test.js            # Uji lifecycle follow-up dan hak akses RM/Admin
 │   ├── haversine.test.js            # Uji formula jarak geofencing 100m
 │   ├── rm-bottom-nav.test.js        # Uji state navigasi mobile dan pemetaan profil RM
@@ -514,6 +515,11 @@ erDiagram
         numeric longitude
         uuid created_by FK
         uuid assigned_rm_id FK
+        text latest_visit_status "Belum Ada Jadwal | pending | execute | selesai | reschedule | tidak_ditemui | batal"
+        uuid latest_visit_rm_id FK
+        date latest_visit_date
+        uuid latest_status_changed_by FK
+        timestamp latest_status_updated_at
         timestamp created_at
         timestamp updated_at
         timestamp deleted_at "Soft Delete Flag"
@@ -577,6 +583,40 @@ erDiagram
         timestamp created_at
     }
 ```
+
+### 8.2 Arsitektur Monitoring Terpusat Kunjungan Nasabah (*Centralized Visit Monitoring*)
+
+Sebelumnya, penentuan status kunjungan dan pewarnaan marker pada Peta Sebaran Nasabah (`CustomerDistributionMap.jsx`) dilakukan dengan mencocokkan array `appointments` milik pengguna yang sedang login. Karena kebijakan Row Level Security (RLS) pada tabel `jadwal_kunjungans` membatasi RM hanya dapat membaca jadwal miliknya sendiri (`rm_id = auth.uid()`), nasabah yang telah memiliki jadwal atau sedang dikunjungi oleh RM lain / dibuat oleh Admin akan terlihat berstatus `'Belum Ada Jadwal'` (marker abu-abu) bagi RM lain.
+
+Untuk menyelesaikan inkonsistensi ini **tanpa melonggarkan RLS** (data catatan kredit, rencana kunjungan, dan privasi RM lain tetap terisolasi 100%), diterapkan arsitektur **Monitoring Terpusat Kunjungan pada Tabel `nasabahs`** via Migrasi `20261125000001_add_centralized_visit_monitoring_to_nasabahs.sql`.
+
+#### 1. Lima Kolom Monitoring pada Tabel `nasabahs`
+Tabel `nasabahs` (yang memiliki kebijakan RLS `SELECT` terbuka bagi seluruh pengguna disetujui/`approved` pada cabang) diperkaya dengan 5 kolom denormalisasi terkontrol:
+- **`latest_visit_status`** (`TEXT` DEFAULT `'Belum Ada Jadwal'`): Status kunjungan operasional terpadu yang dibaca langsung oleh antarmuka peta untuk seluruh role (Admin, RMFT, RMSME).
+- **`latest_visit_rm_id`** (`UUID` REFERENCES `public.profiles(id)`): ID Relationship Manager pelaksana kunjungan fisik di lapangan. Nilai ini **hanya** diisi jika terbukti terdapat riwayat check-in fisik (`action_type = 'check_in'`) oleh pengguna ber-role `'rm'`.
+- **`latest_visit_date`** (`DATE`): Tanggal pelaksanaan atau perencanaan jadwal kunjungan yang menjadi representasi status terkini.
+- **`latest_status_changed_by`** (`UUID` REFERENCES `public.profiles(id)`): Akun pengguna yang melakukan aksi perubahan status terakhir pada jadwal target (terverifikasi dari `jadwal_history`).
+- **`latest_status_updated_at`** (`TIMESTAMPTZ`): Timestamp presisi saat status monitoring diperbarui.
+
+#### 2. Logika Penentuan Status (Tiering Priority Logic)
+Fungsi trigger database `public.sync_nasabah_visit_monitoring(p_nasabah_id)` mengevaluasi seluruh jadwal aktif milik nasabah yang bersangkutan dengan urutan prioritas ketat:
+1. **Tier 1 — `execute` Aktif**: Kunjungan fisik yang telah check-in dan berada dalam tahap administrasi kantor mendapatkan prioritas absolut tertinggi. Jika ada lebih dari satu, dipilih jadwal dengan `check_in_at` / `tanggal` terbaru.
+2. **Tier 2 — `pending` / `reschedule` Terdekat**: Rencana kunjungan aktif mendatang dengan tanggal terdekat (mendekati hari ini).
+3. **Tier 3 — `selesai` / `tidak_ditemui` Terbaru**: Riwayat kunjungan historis, diurutkan secara presisi menggunakan timestamp transisi status terakhir pada `jadwal_history.created_at` (bukan sekadar tanggal jadwal atau updated_at jadwal).
+4. **Fallback**: Status `'batal'` atau `'Belum Ada Jadwal'` jika nasabah tidak memiliki riwayat jadwal kunjungan.
+
+#### 3. Atribusi RM Pelaksana Lapangan yang Ketat
+- Identitas `latest_visit_rm_id` **hanya** diambil dari `jadwal_history.action_type = 'check_in'` yang aktornya (`changed_by`) terbukti memiliki `role = 'rm'` pada tabel `profiles`.
+- Berlaku untuk status `execute`, `selesai`, maupun `tidak_ditemui`.
+- Jika jadwal dibuat/diubah oleh Admin atau tidak terdapat bukti fisik check-in RM, nilai `latest_visit_rm_id` tetap `NULL`. Tidak ada fallback asumsi yang menyesatkan.
+
+#### 4. Integritas Transaksi dan Pencegahan Deadlock
+- **Deferred Trigger**: Trigger `trg_sync_nasabah_visit_monitoring` didefinisikan sebagai `AFTER INSERT OR UPDATE OR DELETE ON public.jadwal_kunjungans DEFERRABLE INITIALLY DEFERRED`. Trigger dieksekusi tepat sebelum `COMMIT`, menjamin seluruh entri pada `jadwal_history` yang di-insert oleh fungsi RPC (`check_in_visit`, `complete_visit_administration`, dll.) sudah tersimpan dan dapat dibaca.
+- **Global Row Locking**: Operasi penguncian baris nasabah menggunakan urutan deterministik (`ORDER BY id ASC FOR NO KEY UPDATE`), mencegah potensi deadlock jika terjadi perpindahan nasabah (`nasabah_id_lama` dan `nasabah_id_baru`) dalam transaksi bersamaan.
+
+#### 5. Supabase Realtime Sinkronisasi Tanpa Polling
+- Tabel `nasabahs` didaftarkan ke publikasi `supabase_realtime` (`ALTER PUBLICATION supabase_realtime ADD TABLE public.nasabahs`).
+- Frontend (`src/App.jsx`) berlangganan event Realtime pada tabel `nasabahs` dan `jadwal_kunjungans`. Ketika status kunjungan diperbarui di lapangan oleh seorang RM, seluruh peta pengguna lain (Admin maupun RM rekan kerja) langsung merefleksikan perubahan warna marker dan informasi detail secara instan tanpa perlu memuat ulang (*refresh*) browser atau login ulang.
 
 ---
 
@@ -727,7 +767,7 @@ Variabel berikut wajib dikonfigurasi pada dashboard **Vercel Project Settings**:
 
 Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit tests*) bawaan Node.js (`node --test`), linter, dan kompilasi build produksi.
 
-### 11.1 Hasil Pengujian Unit Otomatis (85 Test Cases - 100% Pass)
+### 11.1 Hasil Pengujian Unit Otomatis (95 Test Cases - 100% Pass)
 
 ```text
 ▶ Admin Mobile Bottom Navigation Logic (10 tests)
@@ -752,10 +792,11 @@ Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit 
   ✔ hanya Admin yang berwenang menyetujui akun baru dan mengubah role pengguna
 ✔ Role & Approval Access Control Matrix (3.43ms)
 
-▶ Supabase Authentication Security & Demo Elimination Verification (5 tests)
+▶ Supabase Authentication Security & Demo Elimination Verification (6 tests)
   ✔ wajib menolak login jika email atau password kosong
   ✔ tidak ada perlakuan khusus atau bypass untuk email eks-demo
   ✔ menolak akses workspace untuk pengguna yang belum terautentikasi (user = null)
+  ✔ tidak menampilkan halaman pending approval ketika profil masih dimuat (mencegah flashing)
   ✔ menolak pemulihan sesi jika hanya ada token demo lokal lama
   ✔ memvalidasi profil role Admin dan RM langsung dari profil Supabase
 ✔ Supabase Authentication Security (1.93ms)
@@ -795,6 +836,20 @@ Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit 
   ✔ RM dapat melihat nasabah bersama pada cabang yang sama
   ✔ Reset filter mengembalikan seluruh marker sesuai hak akses
 ✔ Customer Map Filtering (1.86ms)
+
+▶ Visit Status Normalization & Marker Style Consistency (2 tests)
+  ✔ menormalisasi status huruf kecil database execute menjadi Execute UI
+  ✔ menghasilkan warna marker biru tua (#00529b) untuk status execute dan Execute
+✔ Visit Status Normalization & Marker Style Consistency (1.50ms)
+
+▶ Centralized Customer Visit Monitoring & Cross-Role Consistency (Admin, RMFT, RMSME) (6 tests)
+  ✔ Admin melihat Budi Execute: marker biru tua (#00529b) dari kolom latest_visit_status
+  ✔ RM A (RMFT) melihat Budi Execute: marker biru tua (#00529b) meskipun appointments miliknya kosong karena RLS
+  ✔ RM B (RMSME) melihat Budi Execute: marker biru tua (#00529b) meskipun appointments miliknya kosong karena RLS
+  ✔ Ketika status monitoring nasabah berubah menjadi selesai, seluruh pengguna melihat marker hijau (#10b981)
+  ✔ Data jadwal dan catatan pribadi Admin tetap terisolasi dan tidak bocor ke RM
+  ✔ Status tidak_ditemui tetap mencatat RM pelaksana jika ada check-in lapangan terverifikasi
+✔ Centralized Customer Visit Monitoring & Cross-Role Consistency (7.51ms)
 
 ▶ Follow-up Reminder & Status Validation (5 tests)
   ✔ mengidentifikasi follow-up jatuh tempo hari ini secara akurat
@@ -863,7 +918,7 @@ Aplikasi e-VisitBRI telah diuji menggunakan pengujian otomatis (*automated unit 
   ✔ counts completed visits by check-in date, while plans follow the current scheduled date
 ✔ Weekly visit metrics (5.67ms)
 
-TOTAL: 85 Passed, 0 Failed, 16 Suites (Duration: ~1.60s)
+TOTAL: 95 Passed, 0 Failed, 18 Suites (Duration: ~2.25s)
 ```
 
 ### 11.2 Hasil Static Code Analysis & Production Build
@@ -972,7 +1027,7 @@ Bagian ini dirancang khusus untuk mempermudah penyusunan dokumen formal **Lapora
 
 #### 3. Hasil Pengujian Sistem (*Testing Results*)
 - Sajikan metodologi pengujian:
-  - **Automated Unit Testing**: 85 kasus uji menggunakan framework uji Node.js bawaan dengan tingkat kelulusan 100% (sertakan tabel matriks pengujian dari Bagian 11.1).
+  - **Automated Unit Testing**: 95 kasus uji menggunakan framework uji Node.js bawaan dengan tingkat kelulusan 100% (sertakan tabel matriks pengujian dari Bagian 11.1).
   - **Static Code Analysis**: Pengujian kode menggunakan ESLint (0 error, 0 warning).
   - **Production Build Testing**: Pengujian kompilasi bundel aset Vite tanpa kegagalan sintaks.
 - **Analisis Keamanan**:
@@ -1030,7 +1085,7 @@ Bagian ini dirancang khusus untuk mempermudah penyusunan dokumen formal **Lapora
 
 5. **Eksekusi Pengujian dan Validasi Kualitas Kode**:
    ```bash
-   # Menjalankan 85 unit test otomatis
+   # Menjalankan 95 unit test otomatis
    npm test
 
    # Menjalankan linter kode

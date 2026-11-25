@@ -4,12 +4,17 @@ function StatusBadge({ status }) {
     Terjadwal: 'bg-blue-50 text-[#00529b] border-blue-200',
     'Belum Dikunjungi': 'bg-blue-50 text-[#00529b] border-blue-200',
     Execute: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+    execute: 'bg-indigo-50 text-indigo-700 border-indigo-200',
     Selesai: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    selesai: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     Reschedule: 'bg-amber-50 text-amber-700 border-amber-200',
+    reschedule: 'bg-amber-50 text-amber-700 border-amber-200',
     'Tidak Ditemui': 'bg-rose-50 text-rose-700 border-rose-200',
     'Tidak ditemui': 'bg-rose-50 text-rose-700 border-rose-200',
+    tidak_ditemui: 'bg-rose-50 text-rose-700 border-rose-200',
     Dibatalkan: 'bg-slate-100 text-slate-600 border-slate-200',
     Batal: 'bg-slate-100 text-slate-600 border-slate-200',
+    batal: 'bg-slate-100 text-slate-600 border-slate-200',
 
     // Follow-up statuses
     'Belum Dilakukan': 'bg-blue-50 text-[#00529b] border-blue-200',

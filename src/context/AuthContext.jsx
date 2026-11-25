@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { isSupabaseConfigured, supabase } from '../services/supabase'
 import { AuthContext } from './authContextInstance'
 import { AUDIT_ACTIONS, ENTITY_TYPES, recordAuditEvent } from '../services/auditLog'
@@ -9,37 +9,51 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [authError, setAuthError] = useState('')
+  const activeProfileFetches = useRef(new Map())
 
   const fetchProfile = useCallback(async (userId, userEmail) => {
     if (!supabase || !userId) return null
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
 
-      if (error && error.code === 'PGRST116') {
-        // Row not found yet (e.g. trigger delay), fallback
-        return {
-          id: userId,
-          nama: userEmail ? userEmail.split('@')[0] : 'Pengguna',
-          email: userEmail,
-          role: 'rm',
-          jenis_rm: null,
-          status: 'pending',
-          assigned_area: 'Palembang',
-        }
-      }
-      if (error) {
-        console.error('Gagal mengambil profil pengguna dari Supabase:', error)
-        return null
-      }
-      return data
-    } catch (err) {
-      console.error('Error saat fetchProfile:', err)
-      return null
+    // Deduplikasi request in-flight: gunakan promise yang sedang berjalan jika ada
+    if (activeProfileFetches.current.has(userId)) {
+      return activeProfileFetches.current.get(userId)
     }
+
+    const fetchPromise = (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single()
+
+        if (error && error.code === 'PGRST116') {
+          // Row not found yet (e.g. trigger delay), fallback
+          return {
+            id: userId,
+            nama: userEmail ? userEmail.split('@')[0] : 'Pengguna',
+            email: userEmail,
+            role: 'rm',
+            jenis_rm: null,
+            status: 'pending',
+            assigned_area: 'Palembang',
+          }
+        }
+        if (error) {
+          console.error('Gagal mengambil profil pengguna dari Supabase:', error)
+          return null
+        }
+        return data
+      } catch (err) {
+        console.error('Error saat fetchProfile:', err)
+        return null
+      } finally {
+        activeProfileFetches.current.delete(userId)
+      }
+    })()
+
+    activeProfileFetches.current.set(userId, fetchPromise)
+    return fetchPromise
   }, [])
 
   const refreshProfile = useCallback(async () => {
@@ -67,11 +81,13 @@ export function AuthProvider({ children }) {
       }
 
       if (initSession?.user) {
-        setSession(initSession)
-        setUser(initSession.user)
         const userProfile = await fetchProfile(initSession.user.id, initSession.user.email)
-        if (isMounted) setProfile(userProfile)
-        if (isMounted) setIsLoading(false)
+        if (isMounted) {
+          setSession(initSession)
+          setUser(initSession.user)
+          setProfile(userProfile)
+          setIsLoading(false)
+        }
       } else {
         if (isMounted) {
           setSession(null)
@@ -86,16 +102,22 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMounted) return
       if (newSession?.user) {
-        setSession(newSession)
-        setUser(newSession.user)
+        setIsLoading(true)
         const userProfile = await fetchProfile(newSession.user.id, newSession.user.email)
-        if (isMounted) setProfile(userProfile)
+        if (isMounted) {
+          setSession(newSession)
+          setUser(newSession.user)
+          setProfile(userProfile)
+          setIsLoading(false)
+        }
       } else {
-        setSession(null)
-        setUser(null)
-        setProfile(null)
+        if (isMounted) {
+          setSession(null)
+          setUser(null)
+          setProfile(null)
+          setIsLoading(false)
+        }
       }
-      if (isMounted) setIsLoading(false)
     })
 
     // Realtime listener for profiles table
@@ -165,23 +187,27 @@ export function AuthProvider({ children }) {
       }
     }
 
+    setIsLoading(true)
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: cleanEmail,
       password,
     })
     if (error) {
+      setIsLoading(false)
       setAuthError(error.message)
       throw error
     }
 
-    setSession(data.session)
-    setUser(data.user)
-
     let loadedProfile = null
     if (data.user) {
       loadedProfile = await fetchProfile(data.user.id, data.user.email)
-      setProfile(loadedProfile)
     }
+
+    setSession(data.session)
+    setUser(data.user)
+    setProfile(loadedProfile)
+    setIsLoading(false)
 
     void recordAuditEvent({
       action: AUDIT_ACTIONS.LOGIN,
